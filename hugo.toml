@@ -1,0 +1,38 @@
+baseURL = "https://e-petko.dev/"
+languageCode = "ru-ru"
+title = "Zhenya Petko Portfolio Showcase"
+theme = "beautifulhugo"
+favicon = "favicon.ico"
+
+[params]
+  Name = "Петько Евгений"  # Замени на своё имя
+  Description = "Студент DevOps, люблю контейнеры, инфраструктуру и код. Здесь моё портфолио."
+  Email = "zheny.petko@gmail.com"  # Замени на свой email
+  GitHub = "https://github.com/zhenyapetko"  # Замени на свой профиль
+  footerText = "© 2025 | Строим надёжные системы"
+
+# Настройки для темы
+[[menu.main]]
+    name = "Главная"
+    url = "/"
+    weight = 10
+
+[[menu.main]]
+    name = "Портфолио"
+    url = "/portfolio/"
+    weight = 20
+
+[[menu.main]]
+    name = "О Проекте"
+    url = "/about/"
+    weight = 30
+
+[[menu.main]]
+    name = "Метрики"
+    url = "/metrics/"
+    weight = 40
+
+[[menu.main]]
+    name = "Контакты"
+    url = "/contact/"
+    weight = 50

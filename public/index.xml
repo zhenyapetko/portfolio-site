@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Главная on Zhenya Petko Portfolio Showcase</title><link>https://e-petko.dev/</link><description>Recent content in Главная on Zhenya Petko Portfolio Showcase</description><generator>Hugo</generator><language>ru-ru</language><lastBuildDate>Tue, 01 Oct 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://e-petko.dev/index.xml" rel="self" type="application/rss+xml"/><item><title>Контакты</title><link>https://e-petko.dev/contact/</link><pubDate>Tue, 01 Oct 2024 00:00:00 +0000</pubDate><guid>https://e-petko.dev/contact/</guid><description>&lt;h1 id="связаться-со-мной"&gt;Связаться со мной&lt;/h1&gt;
+&lt;p&gt;Email: &lt;a href="mailto:zhenya@example.com"&gt;zhenya@example.com&lt;/a&gt; 
+Telegram: @your-telegram&lt;/p&gt;
+&lt;h3 id="форма-обратной-связи"&gt;Форма обратной связи&lt;/h3&gt;
+&lt;!-- raw HTML omitted --&gt;</description></item><item><title>Метрики</title><link>https://e-petko.dev/metrics/</link><pubDate>Tue, 01 Oct 2024 00:00:00 +0000</pubDate><guid>https://e-petko.dev/metrics/</guid><description>&lt;h1 id="статистика-проекта"&gt;Статистика Проекта&lt;/h1&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;h3 id="текущие-метрики"&gt;Текущие метрики:&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;Успешные деплои: 95%&lt;/li&gt;
+&lt;li&gt;Время загрузки сайта: &amp;lt;1 сек&lt;/li&gt;
+&lt;li&gt;Используемые ресурсы AWS: Free Tier&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;!-- raw HTML omitted --&gt; &lt;/p&gt;</description></item><item><title>О Проекте</title><link>https://e-petko.dev/about/</link><pubDate>Tue, 01 Oct 2024 00:00:00 +0000</pubDate><guid>https://e-petko.dev/about/</guid><description>&lt;h1 id="devops-документация-этого-проекта"&gt;DevOps Документация этого Проекта&lt;/h1&gt;
+&lt;h2 id="введение"&gt;Введение&lt;/h2&gt;
+&lt;p&gt;Этот сайт — результат курса по DevOps. Я построил полноценный сервис с использованием конвейера разработки.&lt;/p&gt;
+&lt;h2 id="архитектура"&gt;Архитектура&lt;/h2&gt;
+&lt;p&gt;+&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;+ +&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;-+ +&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;-+
+| Local Dev | &amp;ndash;&amp;gt; | Docker Build | &amp;ndash;&amp;gt; | AWS Deploy |
++&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;+ +&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;-+ +&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;&amp;mdash;-+
+(Hugo + Docker) (Nginx + Site) (EC2 + CD)&lt;/p&gt;
+&lt;h2 id="технический-стек"&gt;Технический стек&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Frontend/Static:&lt;/strong&gt; Hugo&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Контейнеризация:&lt;/strong&gt; Docker&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;IaC:&lt;/strong&gt; Terraform&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;CI/CD:&lt;/strong&gt; GitHub Actions&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Мониторинг:&lt;/strong&gt; Prometheus + Grafana&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Облако:&lt;/strong&gt; AWS EC2&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="будущие-планы"&gt;Будущие планы&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Добавить monitoring метрик реального времени.&lt;/li&gt;
+&lt;li&gt;Интегрировать Kubernetes.&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>Портфолио</title><link>https://e-petko.dev/portfolio/</link><pubDate>Tue, 01 Oct 2024 00:00:00 +0000</pubDate><guid>https://e-petko.dev/portfolio/</guid><description>&lt;h1 id="мои-проекты"&gt;Мои проекты&lt;/h1&gt;
+&lt;h2 id="проект-1-этот-сайт"&gt;Проект 1: Этот сайт&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Описание:&lt;/strong&gt; DevOps портфолио с Hugo и Docker.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Технологии:&lt;/strong&gt; Hugo, Docker, CI/CD.&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/yourusername/repo"&gt;Код на GitHub&lt;/a&gt; &lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="проект-2-другой"&gt;Проект 2: Другой&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Добавь свои реальные проекты здесь.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="список-с-github"&gt;Список с GitHub&lt;/h3&gt;
+&lt;!-- raw HTML omitted --&gt;</description></item></channel></rss>
