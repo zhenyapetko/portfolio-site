@@ -8,14 +8,12 @@ RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.15
     chmod +x /usr/local/bin/hugo && \
     rm hugo.tar.gz
 
-ENV PATH="/usr/local/bin:${PATH}"
-RUN hugo version
-
+    
 COPY . /src
 WORKDIR /src
 RUN ls -la themes/  # Debug: проверить что themes/beautifulhugo exists
 RUN git submodule init || true && git submodule update --init --recursive || true
-RUN /usr/local/bin/hugo --gc --minify --logLevel debug
+RUN export PATH="/usr/local/bin:$PATH" && hugo --gc --minify --logLevel debug
 
 # Stage 2: Same
 FROM nginx:alpine
