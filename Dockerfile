@@ -35,33 +35,9 @@ ENV PATH="/usr/local/bin:${PATH}"
 # Проверяем, что Hugo запускается (это уже успешно!)
 RUN hugo version || (echo "ERROR: hugo version command failed (Hugo still not found or executable failed)!" && exit 1)
 
-WORKDIR / # Возвращаемся в корень контейнера
-
-# Создаем папку для исходников
-RUN mkdir -p /src
-WORKDIR /src
-
-# Копируем отдельными шагами и проверяем
-# НАЧИНАЕМ: КОПИРУЕМ .git
-COPY ./.git /src/.git
-RUN ls -la /src/.git || (echo "ERROR: .git not copied!" && exit 1)
-
-# КОПИРУЕМ hugo.toml
-COPY ./hugo.toml /src/hugo.toml
-RUN ls -la /src/hugo.toml || (echo "ERROR: hugo.toml not copied!" && exit 1)
-
-# КОПИРУЕМ content
-COPY ./content /src/content
-RUN ls -la /src/content || (echo "ERROR: content not copied!" && exit 1)
-
-# КОПИРУЕМ themes
-COPY ./themes /src/themes
-RUN ls -la /src/themes || (echo "ERROR: themes not copied!" && exit 1)
-
-# КОПИРУЕМ nginx (для второго этапа, но пока проверим здесь)
-COPY ./nginx /src/nginx
-RUN ls -la /src/nginx || (echo "ERROR: nginx not copied!" && exit 1)
-
+# Копируем исходный код из хост-машины в /src в контейнере
+# Убедитесь, что вы запускаете docker build из корневой папки вашего репозитория!
+COPY ./ /src
 WORKDIR /src
 
 # Добавим ls для отладки конфигурации
