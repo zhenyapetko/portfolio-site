@@ -19,8 +19,7 @@ jobs:
         context: .
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/web:latest
-        args:
-          YOUR_BUILD_ARGS: value  # Удали, если не нужны args в Dockerfile
+        
     - name: Deploy to server
       uses: appleboy/ssh-action@master
       with:
