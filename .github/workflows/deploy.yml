@@ -27,5 +27,6 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          sudo apt update && sudo apt install -y docker-compose
           sudo /usr/bin/docker-compose -f /root/docker-compose.yml pull
           sudo /usr/bin/docker-compose -f /root/docker-compose.yml up -d
