@@ -5,9 +5,12 @@ FROM alpine:latest AS builder
 RUN apk add --no-cache git wget tar
 RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz
 RUN tar -xzf hugo.tar.gz
-RUN mv hugo /usr/local/bin/hugo
+RUN ls -la  # Посмотрим что распаковалось
+RUN find . -name "hugo" -type f  # Найдем где находится hugo
+RUN cp $(find . -name "hugo" -type f) /usr/local/bin/hugo  # Копируем найденный файл
 RUN chmod +x /usr/local/bin/hugo
-RUN rm -f hugo.tar.gz LICENSE README.md  # Удаляем только конкретные файлы, а не всё!
+RUN rm -f hugo.tar.gz
+RUN ls -la /usr/local/bin/hugo  # Проверим что файл существует
 RUN /usr/local/bin/hugo version
 
 COPY . /src
