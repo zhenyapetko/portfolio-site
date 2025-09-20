@@ -1,5 +1,14 @@
 # Stage 1: Build Hugo site
-FROM klakegg/hugo:0.150.0-ext-alpine AS builder
+FROM alpine:latest AS builder
+
+# Устанавливаем Hugo extended версию
+RUN apk add --no-cache git wget tar && \
+    wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    tar -xzf hugo.tar.gz && \
+    mv hugo /usr/local/bin/hugo && \
+    chmod +x /usr/local/bin/hugo && \
+    rm hugo.tar.gz && \
+    hugo version
 
 RUN apk add --no-cache git
 
