@@ -2,7 +2,7 @@
 FROM alpine:latest AS builder
 
 # Устанавливаем необходимые пакеты
-RUN apk add --no-cache git wget tar libstdc++ libgcc bash
+RUN apk add --no-cache git wget tar libstdc++ libgcc bash file
 
 # --- Блок установки Hugo с отладкой ---
 ARG HUGO_VERSION="0.150.0"
