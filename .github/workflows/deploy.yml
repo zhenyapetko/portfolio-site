@@ -46,13 +46,29 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          REPO_PATH="/opt/portfolio-site" # Выбираем постоянное место для репозитория, не /tmp
+          
+          # Установим docker-compose, если его нет (или обновим)
           sudo apt update && sudo apt install -y docker-compose
-          sudo git clone https://github.com/zhenyapetko/portfolio-site.git /tmp/portfolio-site  # Клонируй repo
-          sudo cp /tmp/portfolio-site/docker-compose.yml /root/docker-compose.yml  # Копируй файлы
-          sudo cp -r /tmp/portfolio-site/themes /root/
-          sudo cp -r /tmp/portfolio-site/content /root/
-          sudo cp /tmp/portfolio-site/Dockerfile /root/
-          sudo rm -rf /tmp/portfolio-site  # Очисти
+          
+          # Клонируем или обновляем репозиторий в постоянном месте
+          if [ -d "$REPO_PATH/.git" ]; then
+            echo "Repository exists. Pulling latest changes..."
+            sudo git -C "$REPO_PATH" pull
+          else
+            echo "Cloning repository to $REPO_PATH..."
+            sudo git clone https://github.com/zhenyapetko/portfolio-site.git "$REPO_PATH"
+          fi
+          
+          # Выполняем Docker Login
           sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          sudo docker pull zhenyapetko/portfolio-site:latest
-          sudo docker-compose -f /root/docker-compose.yml up -d
+          
+          # Переходим в директорию репозитория и запускаем docker-compose
+          echo "Building and deploying from $REPO_PATH..."
+          # `cd $REPO_PATH` гарантирует, что docker-compose будет использовать правильный контекст.
+          # `-f docker-compose.yml` не нужен, если вы уже в этой директории.
+          sudo bash -c "cd $REPO_PATH && docker-compose build portfolio-site && docker-compose up -d"
+          # Если вы хотите, чтобы docker-compose пересоздавал контейнер при обновлении образа:
+          # sudo bash -c "cd $REPO_PATH && docker-compose build portfolio-site && docker-compose up -d --force-recreate portfolio-site"
+          
+          echo "Deployment complete."
