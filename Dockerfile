@@ -15,6 +15,8 @@ RUN mv hugo /usr/local/bin/hugo && \
 # Step 4.5: Debug — check if hugo is in place
 RUN ls -la /usr/local/bin/hugo
 
+RUN file /usr/local/bin/hugo
+
 # Step 5: Verify Hugo
 RUN /usr/local/bin/hugo version
 
