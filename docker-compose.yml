@@ -7,9 +7,7 @@ services:
     volumes:
       - ./content:/src/content 
       - ./static:/src/static
-      - ./config.toml:/src/config.toml
-    env_file:
-      - .env  
+      - ./config.toml:/src/config.toml 
     depends_on:  # Ждёт Prometheus
       - prometheus
     networks:
