@@ -1,17 +1,14 @@
 # Stage 1: Build Hugo site
 FROM alpine:latest AS builder
 
-# Устанавливаем Hugo extended версию
-RUN apk add --no-cache git wget tar
-RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz
-RUN tar -xzf hugo.tar.gz
-RUN ls -la  # Посмотрим что распаковалось
-RUN find . -name "hugo" -type f  # Найдем где находится hugo
-RUN cp $(find . -name "hugo" -type f) /usr/local/bin/hugo  # Копируем найденный файл
-RUN chmod +x /usr/local/bin/hugo
-RUN rm -f hugo.tar.gz
-RUN ls -la /usr/local/bin/hugo  # Проверим что файл существует
-RUN /usr/local/bin/hugo version
+# Устанавливаем Hugo extended версию (ПРАВИЛЬНО!)
+RUN apk add --no-cache git wget tar && \
+    wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    tar -xzf hugo.tar.gz && \
+    mv hugo/hugo /usr/local/bin/hugo && \ 
+    chmod +x /usr/local/bin/hugo && \
+    rm -rf hugo.tar.gz hugo/ && \
+    hugo version
 
 COPY . /src
 WORKDIR /src
