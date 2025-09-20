@@ -1,0 +1,58 @@
+# Этот файл игнорит ненужные файлы в Git
+
+# Terraform: Кэш, планы, переменные с секретами (не пушь ключи!)
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+*.tfplan
+*.tfvars  # Убери, еслиprivate.tfvars в гите
+crash.log
+.terraform.lock.hcl
+
+# Ansible
+*.log
+*.retry
+ansible.cfg  # Если локальный, else пушь
+# inventory.ini  # Раскомментируй, если не пушить (secrets могут быть)
+
+# Docker
+Dockerfile.backup
+docker-compose.override.yml  # Если есть локальный override
+.dockerignore  # Нет, но если добавишь
+
+# Hugo/Static site
+public/
+resources/
+
+# Node.js 
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (если Ansible или скрипты)
+__pycache__/
+*.pyc
+*.pyo
+
+# OS 
+.DS_Store  # macOS
+Thumbs.db  # Windows
+*.tmp
+
+# IDE (VS Code, etc.)
+.vscode/
+*.swp
+*.swo
+.idea/
+
+# Logs 
+logs/
+*.log
+
+# secrets
+*.pem
+*.key
+.env
+
+LICENSE

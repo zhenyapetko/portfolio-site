@@ -1,0 +1,63 @@
+services:
+  portfolio-site:  # сайт из Dockerfile
+    build: .  
+    ports:
+      - "8080:80"  # Локал:8080 -> Nginx:80
+      - "8443:443"  # Если нужен HTTPS локально
+    volumes:
+      - ./content:/src/content 
+      - ./static:/src/static
+      - ./config.toml:/src/config.toml
+    env_file:
+      - .env  
+    depends_on:  # Ждёт Prometheus
+      - prometheus
+    networks:
+      - monitoring
+
+  prometheus:  
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"  
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml  # Конфиг (создай файлы)
+      - prometheus_data:/prometheus  # Persist data
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - monitoring
+
+  grafana:  # Dashboard на базу Prometheus
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"  # Открой http://localhost:3000 (login admin/admin)
+    volumes:
+      - grafana_data:/var/lib/grafana  # Persist dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Измени password!
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+  node-exporter:  # Exporter для системных metrics (подключает к Prometheus)
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"  # Prometheus scrap-ит это
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge
