@@ -1,19 +1,34 @@
 # Stage 1: Build Hugo site
 FROM alpine:latest AS builder
 
-RUN apk add --no-cache git wget tar libstdc++ libgcc
-RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
-    tar -xzf hugo.tar.gz && \
-    mv hugo /usr/local/bin/hugo && \
+RUN apk add --no-cache git wget tar libstdc++ libgcc bash # Добавил bash для удобства отладки
+
+# --- Исправленный блок установки Hugo ---
+# Задаем версию Hugo
+ARG HUGO_VERSION="0.150.0"
+ARG HUGO_PKG="hugo_extended_${HUGO_VERSION}_linux-amd64" # Имя пакета, которое будет в архиве
+ARG HUGO_TARBALL="${HUGO_PKG}.tar.gz"                     # Полное имя архива
+ARG HUGO_DOWNLOAD_URL="https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${HUGO_TARBALL}"
+
+# Скачиваем архив в текущий рабочий каталог
+RUN wget -O ${HUGO_TARBALL} "${HUGO_DOWNLOAD_URL}" && \
+    # Извлекаем содержимое архива. В результате появится каталог с именем HUGO_PKG
+    tar -xzf ${HUGO_TARBALL} && \
+    # Перемещаем исполняемый файл 'hugo' ИЗ извлеченного каталога в /usr/local/bin
+    mv ${HUGO_PKG}/hugo /usr/local/bin/hugo && \
+    # Делаем его исполняемым
     chmod +x /usr/local/bin/hugo && \
-    rm hugo.tar.gz
+    # Удаляем скачанный архив и извлеченный каталог
+    rm -r ${HUGO_TARBALL} ${HUGO_PKG}
+# ----------------------------------------
 
+# Явно устанавливаем PATH, так как alpine:latest может не включать /usr/local/bin по умолчанию
+# Или чтобы быть уверенным в последовательности PATH
+ENV PATH="/usr/local/bin:${PATH}"
 
-RUN which hugo || find / -name "hugo" -type f 2>/dev/null || echo "Hugo not found"
-RUN ls -la /usr/bin/hugo || echo "No hugo in /usr/bin"
-RUN ls -la /usr/local/bin/hugo || echo "No hugo in /usr/local/bin"
-RUN echo "PATH: $PATH"
+# Проверяем, что Hugo установлен и находится в PATH
 RUN hugo version
+
     
 COPY . /src
 WORKDIR /src
