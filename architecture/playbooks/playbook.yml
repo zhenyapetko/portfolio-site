@@ -1,0 +1,36 @@
+---
+- hosts: webservers
+  become: yes
+  vars:
+    docker_username: "{{ lookup('env', 'DOCKER_USERNAME') }}"
+    docker_password: "{{ lookup('env', 'DOCKER_PASSWORD') }}"
+    container_name: portfolio-site
+
+  tasks:
+    - name: Update packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install Docker.io and Docker Compose
+      apt:
+        name: docker.io,docker-compose
+        state: present
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+
+    - name: Login to Docker Hub
+      command: "docker login -u {{ docker_username }} -p {{ docker_password }}"
+
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ docker_username }}/{{ container_name }}:latest"
+        source: pull
+
+    - name: Run docker-compose up
+      command: "docker-compose up -d"
+      args:
+        chdir: /root
