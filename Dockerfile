@@ -13,7 +13,7 @@ RUN mv hugo /usr/local/bin/hugo && \
     chmod +x /usr/local/bin/hugo && \
     rm hugo.tar.gz
 # Step 5: Verify Hugo
-RUN hugo version
+RUN /usr/local/bin/hugo version
 
 
 COPY . /src
