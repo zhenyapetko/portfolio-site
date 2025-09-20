@@ -1,8 +1,15 @@
 # Stage 1: Build Hugo site
-FROM alpine:latest AS builder
+FROM debian:stable-slim AS builder
 
 # Устанавливаем необходимые пакеты
-RUN apk add --no-cache git wget tar libstdc++ libgcc bash file
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    wget \
+    tar \
+    ca-certificates \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # --- Блок установки Hugo с отладкой ---
 ARG HUGO_VERSION="0.150.0"
@@ -11,7 +18,9 @@ ARG HUGO_TARBALL="${HUGO_PKG}.tar.gz"
 ARG HUGO_DOWNLOAD_URL="https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${HUGO_TARBALL}"
 
 # 1. Скачиваем архив
+WORKDIR /tmp
 RUN wget -O "${HUGO_TARBALL}" "${HUGO_DOWNLOAD_URL}"
+
 
 # 2. Проверяем, что архив скачался
 RUN ls -la "${HUGO_TARBALL}" || (echo "ERROR: Hugo tarball not found!" && exit 1)
