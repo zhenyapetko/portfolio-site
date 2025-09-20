@@ -1,6 +1,7 @@
 # Stage 1: Build Hugo site
 FROM alpine:latest AS builder
 
+RUN apk add --no-cache libc6-compat
 RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz
 
 # Step 3: Extract and check
@@ -15,6 +16,7 @@ RUN mv hugo /usr/local/bin/hugo && \
 # Step 4.5: Debug — check if hugo is in place
 RUN ls -la /usr/local/bin/hugo
 
+RUN ldd /usr/local/bin/hugo
 RUN file /usr/local/bin/hugo
 
 # Step 5: Verify Hugo
