@@ -37,7 +37,7 @@ RUN hugo version || (echo "ERROR: hugo version command failed (Hugo still not fo
 
 # Копируем исходный код из хост-машины в /src в контейнере
 # Убедитесь, что вы запускаете docker build из корневой папки вашего репозитория!
-COPY . /src
+COPY ./ /src
 WORKDIR /src
 
 # Добавим ls для отладки конфигурации
