@@ -1,72 +1,68 @@
 ---
 - hosts: webservers
-  become: yes
+  become: yes # Выполнять все задачи от имени root
   vars:
     docker_username: "{{ lookup('env', 'DOCKER_USERNAME') }}"
     docker_password: "{{ lookup('env', 'DOCKER_PASSWORD') }}"
-    container_name: portfolio-site
-    github_repo: "https://github.com/zhenyapetko/portfolio-site.git"  # Fix на своё имя
+    github_repo: "https://github.com/zhenyapetko/portfolio-site.git"
+    project_root: /opt/portfolio-site # Определяем корневую папку проекта
+    cert_dir: "{{ project_root }}/certs" # Папка для сертификатов Let's Encrypt
+    nginx_conf_src: "{{ project_root }}/nginx/nginx.conf" # Путь к nginx.conf в репозитории, если он там
+    nginx_conf_dest: "{{ project_root }}/nginx.conf" # Место куда Nginx ожидает конфиг внутри/рядом с compose
 
   tasks:
-    - name: Update packages
+    - name: Update apt cache
       apt:
         update_cache: yes
+        cache_valid_time: 3600 # Обновить кэш, если ему больше часа
+
+    - name: Upgrade all packages
+      apt:
         upgrade: yes
 
-    - name: Install Docker.io and Docker Compose
+    - name: Install required packages (git, docker.io, docker-compose-plugin)
       apt:
-        name: docker.io,docker-compose
+        name: 
+          - git
+          - docker.io
+          - python3-pip # Необходим для docker_login модуля, если используется
+          - docker-compose-plugin # Установка Docker Compose V2
         state: present
+        update_cache: yes # Обновит кэш перед установкой
 
-    - name: Start Docker
+    - name: Start and enable Docker service
       service:
         name: docker
         state: started
+        enabled: yes
 
-    - name: Login to Docker Hub
-      command: "docker login -u {{ docker_username }} -p {{ docker_password }}"
+    - name: Add 'ubuntu' user to the docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
 
-    - name: Clone repository to temp dir
+    - name: Create project root directory if it does not exist
+      file:
+        path: "{{ project_root }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Clone or update the repository
       git:
         repo: "{{ github_repo }}"
-        dest: /tmp/portfolio-site
+        dest: "{{ project_root }}"
         version: main
+        accept_hostkey: yes # Принимает ключ хоста GitHub автоматически
+      become_user: ubuntu # Клонируем от имени пользователя ubuntu
 
-    - name: Copy docker-compose.yml from repo
-      copy:
-        src: /tmp/portfolio-site/docker-compose.yml
-        dest: /root/docker-compose.yml
 
-    - name: Copy themes from repo
-      copy:
-        src: /tmp/portfolio-site/themes/
-        dest: /root/themes/
-        directory_mode: yes
-        recurse: yes
-
-    - name: Copy content from repo
-      copy:
-        src: /tmp/portfolio-site/content/
-        dest: /root/content/
-        directory_mode: yes
-        recurse: yes
-
-    - name: Copy Dockerfile from repo
-      copy:
-        src: /tmp/portfolio-site/Dockerfile
-        dest: /root/Dockerfile
-
-    - name: Pull Docker image
-      docker_image:
-        name: "zhenyapetko/portfolio-site:latest" 
-        source: pull
-
-    - name: Run docker-compose up
-      command: "docker-compose up -d"
-      args:
-        chdir: /root
-
-    - name: Cleanup temp dir
-      file:
-        path: /tmp/portfolio-site
-        state: absent
+    - name: Run docker-compose build and up
+      # 'docker compose' (с пробелом) для V2
+      community.docker.docker_compose: # Используем специализированный модуль ansible для docker compose
+        project_src: "{{ project_root }}" # root directory of the compose project
+        state: present # Заменит 'up -d' в данном случае
+        build: yes # Собираем образы из Dockerfile, если они есть
+        remove_volumes: no # Не удалять тома при перезапуске (важно для Let's Encrypt)

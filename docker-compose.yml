@@ -2,8 +2,8 @@ services:
   portfolio-site:  # сайт из Dockerfile
     build: .  
     ports:
-      - "8080:80"  # Локал:8080 -> Nginx:80
-      - "8443:443"  # Если нужен HTTPS локально
+      - "80:80"  # Локал:8080 -> Nginx:80
+      - "443:443"  # Если нужен HTTPS локально
     volumes:
       #- ./content:/src/content 
       #- ./static:/src/static
@@ -13,6 +13,7 @@ services:
       - prometheus
     networks:
       - monitoring
+    restart: unless-stopped
 
   prometheus:  
     image: prom/prometheus:latest
@@ -26,6 +27,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
     networks:
       - monitoring
+    restart: unless-stopped
 
   grafana:  # Dashboard на базу Prometheus
     image: grafana/grafana:latest
@@ -39,6 +41,7 @@ services:
       - prometheus
     networks:
       - monitoring
+    restart: unless-stopped
 
   node-exporter:  # Exporter для системных metrics (подключает к Prometheus)
     image: prom/node-exporter:latest
@@ -52,6 +55,7 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
+    restart: unless-stopped
 
 volumes:
   prometheus_data:
