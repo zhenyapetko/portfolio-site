@@ -3,10 +3,10 @@ FROM alpine:latest AS builder
 
 RUN apk add --no-cache git wget tar libstdc++ libgcc
 RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
-    tar -xzf hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    tar -xzf hugo.tar.gz && \
     mv hugo /usr/local/bin/hugo && \
     chmod +x /usr/local/bin/hugo && \
-    rm hugo_extended*.tar.gz
+    rm hugo.tar.gz
 
 
 COPY . /src
