@@ -13,7 +13,7 @@ COPY . /src
 WORKDIR /src
 RUN ls -la themes/  # Debug: проверить что themes/beautifulhugo exists
 RUN git submodule init || true && git submodule update --init --recursive || true
-RUN /usr/local/bin/hugo --gc --minify --logLevel debug
+RUN /usr/bin/hugo --gc --minify --logLevel debug
 
 # Stage 2: Same
 FROM nginx:alpine
