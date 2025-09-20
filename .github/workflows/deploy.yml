@@ -30,12 +30,16 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
     
-    - name: Build and push image
-      uses: docker/build-push-action@v3
-      with:
-        context: .
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/portfolio-site:latest
+    - name: Build and push with plain Docker commands
+      run: |
+        # Этот шаг выполняется в корне репозитория (Current working directory: /home/runner/work/portfolio-site/portfolio-site)
+        echo "Verifying files before docker build commands:"
+        ls -la
+        ls -la nginx/ || echo "nginx/ directory not found or empty on host"
+        
+        # Собираем образ
+        docker build -t zhenyapetko/portfolio-site:latest . # `.` в конце очень важен!
+
 
     - name: Deploy to server
       uses: appleboy/ssh-action@master
