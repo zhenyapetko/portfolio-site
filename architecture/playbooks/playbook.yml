@@ -5,6 +5,7 @@
     docker_username: "{{ lookup('env', 'DOCKER_USERNAME') }}"
     docker_password: "{{ lookup('env', 'DOCKER_PASSWORD') }}"
     container_name: portfolio-site
+    github_repo: "https://github.com/zhenyapetko/portfolio-site.git"  # Fix на своё имя
 
   tasks:
     - name: Update packages
@@ -25,12 +26,47 @@
     - name: Login to Docker Hub
       command: "docker login -u {{ docker_username }} -p {{ docker_password }}"
 
+    - name: Clone repository to temp dir
+      git:
+        repo: "{{ github_repo }}"
+        dest: /tmp/portfolio-site
+        version: main
+
+    - name: Copy docker-compose.yml from repo
+      copy:
+        src: /tmp/portfolio-site/docker-compose.yml
+        dest: /root/docker-compose.yml
+
+    - name: Copy themes from repo
+      copy:
+        src: /tmp/portfolio-site/themes/
+        dest: /root/themes/
+        directory_mode: yes
+        recurse: yes
+
+    - name: Copy content from repo
+      copy:
+        src: /tmp/portfolio-site/content/
+        dest: /root/content/
+        directory_mode: yes
+        recurse: yes
+
+    - name: Copy Dockerfile from repo
+      copy:
+        src: /tmp/portfolio-site/Dockerfile
+        dest: /root/Dockerfile
+
     - name: Pull Docker image
       docker_image:
-        name: zhenyapetko/portfolio-site:latest"
+        name: "zhenyapetko/portfolio-site:latest" 
         source: pull
 
     - name: Run docker-compose up
       command: "docker-compose up -d"
       args:
         chdir: /root
+
+    - name: Cleanup temp dir
+      file:
+        path: /tmp/portfolio-site
+        state: absent
