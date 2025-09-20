@@ -2,25 +2,11 @@
 FROM alpine:latest AS builder
 
 RUN apk add --no-cache git wget tar libstdc++ libgcc
-RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz
-
-# Step 3: Extract and check
-RUN tar -tzf hugo.tar.gz | head -10  # Debug: show contents before extract
-RUN tar -xzf hugo.tar.gz
-RUN ls -la  # Debug: check if hugo appeared
-
-# Step 4: Move and set permissions
-RUN mv hugo /usr/local/bin/hugo && \
+RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    tar -xzf hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    mv hugo /usr/local/bin/hugo && \
     chmod +x /usr/local/bin/hugo && \
-    rm hugo.tar.gz
-# Step 4.5: Debug — check if hugo is in place
-RUN ls -la /usr/local/bin/hugo
-
-RUN ldd /usr/local/bin/hugo
-RUN file /usr/local/bin/hugo
-
-# Step 5: Verify Hugo
-RUN /usr/local/bin/hugo version
+    rm hugo_extended*.tar.gz
 
 
 COPY . /src
