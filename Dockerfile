@@ -12,6 +12,9 @@ RUN ls -la  # Debug: check if hugo appeared
 RUN mv hugo /usr/local/bin/hugo && \
     chmod +x /usr/local/bin/hugo && \
     rm hugo.tar.gz
+# Step 4.5: Debug — check if hugo is in place
+RUN ls -la /usr/local/bin/hugo
+
 # Step 5: Verify Hugo
 RUN /usr/local/bin/hugo version
 
