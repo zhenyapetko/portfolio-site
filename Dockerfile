@@ -54,7 +54,7 @@ RUN hugo --gc --minify --logLevel debug
 # Stage 2: Fast and light Nginx for static site
 FROM nginx:alpine
 COPY --from=builder /src/public /usr/share/nginx/html
-COPY nginx/nginx.conf /etc/nginx/nginx.conf # Убедитесь, что nginx/nginx.conf существует в вашем проекте!
+COPY nginx/nginx.conf /etc/nginx/nginx.conf 
 EXPOSE 80
 EXPOSE 443
 CMD ["nginx", "-g", "daemon off;"]
