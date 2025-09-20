@@ -3,11 +3,11 @@ FROM alpine:latest AS builder
 
 # Устанавливаем Hugo extended версию (ПРАВИЛЬНО!)
 RUN apk add --no-cache git wget tar && \
-    wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_Linux-64bit.tar.gz && \
-    tar -xzf hugo.tar.gz && \
-    mv hugo/hugo /usr/local/bin/hugo && \ 
+    wget https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    tar -xzf hugo_extended_0.150.0_linux-amd64.tar.gz && \
+    sudo mv hugo /usr/local/bin/hugo \ 
     chmod +x /usr/local/bin/hugo && \
-    rm -rf hugo.tar.gz hugo/ && \
+    rm hugo_extended*.tar.gz && \
     hugo version
 
 COPY . /src
