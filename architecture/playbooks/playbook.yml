@@ -27,7 +27,7 @@
 
     - name: Pull Docker image
       docker_image:
-        name: "{{ docker_username }}/{{ container_name }}:latest"
+        name: zhenyapetko/portfolio-site:latest"
         source: pull
 
     - name: Run docker-compose up
