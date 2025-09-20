@@ -4,31 +4,46 @@ FROM alpine:latest AS builder
 # Устанавливаем необходимые пакеты
 RUN apk add --no-cache git wget tar libstdc++ libgcc bash
 
-# --- Исправленный блок установки Hugo ---
-# Задаем версию Hugo
+# --- Блок установки Hugo с отладкой ---
 ARG HUGO_VERSION="0.150.0"
-ARG HUGO_PKG="hugo_extended_${HUGO_VERSION}_linux-amd64" # Имя пакета используется в URL, но не для папки
-ARG HUGO_TARBALL="${HUGO_PKG}.tar.gz"                     # Полное имя архива
+ARG HUGO_PKG="hugo_extended_${HUGO_VERSION}_linux-amd64"
+ARG HUGO_TARBALL="${HUGO_PKG}.tar.gz"
 ARG HUGO_DOWNLOAD_URL="https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${HUGO_TARBALL}"
 
-# Скачиваем архив в текущий рабочий каталог
-RUN wget -O "${HUGO_TARBALL}" "${HUGO_DOWNLOAD_URL}" && \
-    # Извлекаем содержимое архива.
-    # В этом случае, tar -xzf извлекает ОДИН ФАЙЛ 'hugo' прямо в текущий каталог.
-    tar -xzf "${HUGO_TARBALL}" && \
-    # Перемещаем исполняемый файл 'hugo' (который теперь находится в текущем каталоге) в /usr/local/bin
-    mv hugo /usr/local/bin/hugo && \
-    # Делаем его исполняемым
-    chmod +x /usr/local/bin/hugo && \
-    # Удаляем скачанный архив
-    rm "${HUGO_TARBALL}"
+# 1. Скачиваем архив
+RUN wget -O "${HUGO_TARBALL}" "${HUGO_DOWNLOAD_URL}"
+
+# 2. Проверяем, что архив скачался
+RUN ls -la "${HUGO_TARBALL}" || (echo "ERROR: Hugo tarball not found!" && exit 1)
+
+# 3. Извлекаем. Здесь мы узнаем, как именно распаковывается архив.
+# Мы извлечем его и посмотрим, что внутри.
+# Затем предполагаем, что исполняемый файл "hugo" находится прямо в корне архива.
+RUN tar -xzf "${HUGO_TARBALL}"
+
+# 4. Проверяем, что исполняемый файл 'hugo' появился в текущем каталоге
+RUN ls -la hugo || (echo "ERROR: Hugo executable not found after extraction!" && exit 1)
+RUN file hugo # Этот шаг поможет понять, что это за файл (для отладки)
+
+# 5. Перемещаем исполняемый файл 'hugo' в /usr/local/bin
+RUN mv hugo /usr/local/bin/hugo
+
+# 6. Делаем его исполняемым
+RUN chmod +x /usr/local/bin/hugo
+
+# 7. Убеждаемся, что bin удален (архив)
+RUN rm "${HUGO_TARBALL}"
+
+# 8. Проверяем, что Hugo теперь находится в /usr/local/bin
+RUN ls -la /usr/local/bin/hugo || (echo "ERROR: Hugo not in /usr/local/bin after mv!" && exit 1)
 # ----------------------------------------
 
-# Явно устанавливаем PATH
+# Явно устанавливаем PATH. Эта форма универсальнее и безопаснее.
 ENV PATH="/usr/local/bin:${PATH}"
 
 # Проверяем, что Hugo установлен и находится в PATH
-RUN hugo version || true # Добавил || true, чтобы сборка не упала, если hugo version выдаст предупреждение, но сам бинарник есть.
+RUN hugo version || (echo "ERROR: hugo version command failed (hugo not found in PATH or executable failed)!" && exit 1)
+
 
 
     
