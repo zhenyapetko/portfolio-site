@@ -2,16 +2,15 @@
 FROM alpine:latest AS builder
 
 # Устанавливаем Hugo extended версию
-RUN apk add --no-cache git wget tar && \
-    wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
-    tar -xzf hugo.tar.gz && \
-    mv hugo /usr/local/bin/hugo && \
-    chmod +x /usr/local/bin/hugo && \
-    rm hugo.tar.gz && \
-    # Добавляем /usr/local/bin в PATH!
-    export PATH="/usr/local/bin:$PATH" && \
-    echo 'export PATH="/usr/local/bin:$PATH"' >> /root/.profile && \
-    hugo version
+RUN apk add --no-cache git wget tar
+RUN wget -O hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz
+RUN tar -xzf hugo.tar.gz
+RUN ls -la  # Посмотрим что распаковалось
+RUN find . -name "hugo" -type f  # Найдем файл hugo
+RUN mv hugo /usr/local/bin/hugo || find . -name "hugo" -type f -exec mv {} /usr/local/bin/hugo \;
+RUN chmod +x /usr/local/bin/hugo
+RUN rm -rf hugo.tar.gz *LICENSE* *README*
+RUN /usr/local/bin/hugo version
 
 COPY . /src
 WORKDIR /src
