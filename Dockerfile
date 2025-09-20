@@ -5,7 +5,7 @@ FROM alpine:latest AS builder
 RUN apk add --no-cache git wget tar && \
     wget https://github.com/gohugoio/hugo/releases/download/v0.150.0/hugo_extended_0.150.0_linux-amd64.tar.gz && \
     tar -xzf hugo_extended_0.150.0_linux-amd64.tar.gz && \
-    sudo mv hugo /usr/local/bin/hugo \ 
+    mv hugo /usr/local/bin/hugo \ 
     chmod +x /usr/local/bin/hugo && \
     rm hugo_extended*.tar.gz && \
     hugo version
