@@ -12,33 +12,31 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Debug Docker context before build
-      run: |
-        echo "Listing current directory contents:"
-        ls -la
-        echo "Listing nginx/ directory contents:"
-        ls -la nginx/ || echo "nginx/ directory not found or empty"
-        echo "Current working directory:"
-        pwd
-        echo "Contents of .dockerignore (if exists):"
-        cat .dockerignore || echo ".dockerignore not found"
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Build and push with plain Docker commands
+    - name: Debug Host Environment Before Build
       run: |
-        # Этот шаг выполняется в корне репозитория (Current working directory: /home/runner/work/portfolio-site/portfolio-site)
-        echo "Verifying files before docker build commands:"
+        echo "Current working directory on host:"
+        pwd
+        echo "Contents of current directory on host:"
         ls -la
-        ls -la nginx/ || echo "nginx/ directory not found or empty on host"
-        
-        # Собираем образ
-        docker build -t zhenyapetko/portfolio-site:latest . # `.` в конце очень важен!
+        echo "Contents of nginx/ on host:"
+        ls -la nginx/ || echo "nginx/ directory not found on host"
+        echo "Contents of themes/ on host:"
+        ls -la themes/ || echo "themes/ directory not found on host"
+        echo "Contents of themes/beautifulhugo/ on host:"
+        ls -la themes/beautifulhugo/ || echo "themes/beautifulhugo/ not found or empty on host"
+        echo "Contents of .git/ on host:"
+        ls -la .git/ || echo ".git/ not found on host" # Проверяем .git
+        echo "Contents of .gitmodules/ on host:"
+        cat .gitmodules || echo ".gitmodules not found on host" # Проверяем .gitmodules
+
+    - name: Build the Docker image manually (NO CACHE)
+      run: |
+        # Этот шаг выполняется в корне репозитория
+        docker build -t portfolio-site:latest . --no-cache --progress=plain
+
 
 
     - name: Deploy to server
