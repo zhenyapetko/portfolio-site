@@ -24,6 +24,7 @@ jobs:
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+        DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
         # Замените на публичный URL вашего репозитория,
         # если репозиторий приватный, нужно настроить SSH-доступ для Git
         REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" 
@@ -84,25 +85,23 @@ jobs:
           
           ---
           
-          🚀 *Проект:* `{{ github.repository }}`
-          🌿 *Ветка:* `{{ github.ref_name }}`
-          📦 *Коммит:* `{{ github.sha }}`
+          🚀 *Проект:* `${{ github.repository }}`
+          🌿 *Ветка:* `${{ github.ref_name }}`
+          📦 *Коммит:* `${{ github.sha }}`
+          👤 *Автор:* `${{ github.actor }}`
           
           ---
           
-          🌐 *Ваш сайт доступен:*
-          [Перейти на сайт](http://${{ secrets.SSH_HOST }})
+          🌐 *Все сервисы доступны:*
           
-          📊 *Мониторинг Grafana:*
-          [Grafana Dashboard](http://${{ secrets.SSH_HOST }}:3000)
-          
-          📈 *Мониторинг Prometheus:*
-          [Prometheus Status](http://${{ secrets.SSH_HOST }}:9090)
+          *   **Сайт:** [Перейти](${ (startsWith(env.DOMAIN_NAME, 'http://') || startsWith(env.DOMAIN_NAME, 'https://')) && env.DOMAIN_NAME || format('http://{0}', env.DOMAIN_NAME) })
+          *   **Grafana:** [Панель](${ (startsWith(env.DOMAIN_NAME, 'http://') || startsWith(env.DOMAIN_NAME, 'https://')) && env.DOMAIN_NAME || format('http://{0}', env.DOMAIN_NAME) }:3000)
+          *   **Prometheus:** [Статус](${ (startsWith(env.DOMAIN_NAME, 'http://') || startsWith(env.DOMAIN_NAME, 'https://')) && env.DOMAIN_NAME || format('http://{0}', env.DOMAIN_NAME) }:9090)
           
           ---
           
-          ✅ *Все сервисы запущены и работают!*
-    
+          ✅ *Все контейнеры запущены и работают!*
+
     - name: Send Telegram Notification (Failure)
       if: failure()
       uses: appleboy/telegram-action@master
@@ -115,9 +114,10 @@ jobs:
           
           ---
           
-          ❌ *Проект:* `{{ github.repository }}`
-          🌿 *Ветка:* `{{ github.ref_name }}`
-          📦 *Коммит:* `{{ github.sha }}`
+          ❌ *Проект:* `${{ github.repository }}`
+          🌿 *Ветка:* `${{ github.ref_name }}`
+          📦 *Коммит:* `${{ github.sha }}`
+          👤 *Автор:* `${{ github.actor }}`
           
           ---
           
