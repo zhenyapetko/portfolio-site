@@ -2,15 +2,18 @@
 FROM debian:stable-slim AS builder
 
 # Устанавливаем необходимые пакеты для Debian
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    wget \
-    tar \
-    ca-certificates \
-    build-essential \
-    file \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        wget \
+        tar \
+        ca-certificates \
+        build-essential \
+        file && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+
 
 # --- Блок установки Hugo ---
 ARG HUGO_VERSION="0.150.0"
