@@ -26,40 +26,40 @@ jobs:
         SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
         REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" # Замените на публичный URL вашего репозитория
 
-      run: |
-        set -e # Выйти немедленно, если любая команда завершится неудачей
+        run: |
+            set -e # Выйти немедленно, если любая команда завершится неудачей
 
-        echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
-        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF'
-          REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
+            echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
+            ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF'
+              REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
           
-          # --- Подготовка репозитория ---
-          if [ ! -d "$REPO_PATH" ]; then
-            echo "Cloning repository to $REPO_PATH..."
-            # git clone должен быть от пользователя, который будет запускать docker-compose,
-            # либо нужно настроить права.
-            git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
-          fi
+              # --- Подготовка репозитория ---
+              if [ ! -d "$REPO_PATH" ]; then
+                echo "Cloning repository to $REPO_PATH..."
+                # git clone должен быть от пользователя, который будет запускать docker-compose,
+                # либо нужно настроить права.
+                git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
+              fi
           
-          echo "Entering project directory: $REPO_PATH"
-          cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
+              echo "Entering project directory: $REPO_PATH"
+              cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
 
-          echo "Pulling latest changes from Git..."
-          git pull origin main || { echo "Failed to pull latest changes"; exit 1; }
+              echo "Pulling latest changes from Git..."
+              git pull origin main || { echo "Failed to pull latest changes"; exit 1; }
           
-          # --- Docker Compose действия ---
-          echo "Stopping existing services..."
-          docker-compose down || echo "No running services to stop or failed gracefully."
+              # --- Docker Compose действия ---
+              echo "Stopping existing services..."
+              docker-compose down || echo "No running services to stop or failed gracefully."
+                
+              echo "Building services..."
+              # --no-cache если нужно, но обычно --build достаточно умён, чтобы использовать кэш
+              docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
           
-          echo "Building services..."
-          # --no-cache если нужно, но обычно --build достаточно умён, чтобы использовать кэш
-          docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
+              echo "Starting services..."
+              docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
           
-          echo "Starting services..."
-          docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
-          
-          echo "Deployment successful."
-EOF
+              echo "Deployment successful."
+        EOF
 
     - name: Send Telegram Notification (Success)
       if: success() 
