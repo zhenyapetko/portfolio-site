@@ -1,74 +1,89 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline to EC2
+
 on:
   push:
-    branches: [main]
+    branches: [main] # Запускать при пуше в ветку main
+
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest # Используем ubuntu-latest для выполнения джоба GitHub Actions
+
+
     steps:
-    
     - name: Checkout code
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+        fetch-depth: 0 # Полная история для Git Submodules, если используются
 
-    - name: Debug Host Environment Before Build
-      run: |
-        echo "Current working directory on host:"
-        pwd
-        echo "Contents of current directory on host:"
-        ls -la
-        echo "Contents of nginx/ on host:"
-        ls -la nginx/ || echo "nginx/ directory not found on host"
-        echo "Contents of themes/ on host:"
-        ls -la themes/ || echo "themes/ directory not found on host"
-        echo "Contents of themes/beautifulhugo/ on host:"
-        ls -la themes/beautifulhugo/ || echo "themes/beautifulhugo/ not found or empty on host"
-        echo "Contents of .git/ on host:"
-        ls -la .git/ || echo ".git/ not found on host" # Проверяем .git
-        echo "Contents of .gitmodules/ on host:"
-        cat .gitmodules || echo ".gitmodules not found on host" # Проверяем .gitmodules
-
-    - name: Build the Docker image manually (NO CACHE)
-      run: |
-        # Этот шаг выполняется в корне репозитория
-        docker build -t portfolio-site:latest . --no-cache --progress=plain
-
-
-
-    - name: Deploy to server
-      uses: appleboy/ssh-action@master
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3 # Более удобный способ настройки SSH
       with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          REPO_PATH="/opt/portfolio-site" # Выбираем постоянное место для репозитория, не /tmp
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy to Server via SSH
+      env:
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+        REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" # Замените на публичный URL вашего репозитория
+
+      run: |
+        set -e # Выйти немедленно, если любая команда завершится неудачей
+
+        echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
+        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF'
+          REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
           
-          # Установим docker-compose, если его нет (или обновим)
-          sudo apt update && sudo apt install -y docker-compose
-          
-          # Клонируем или обновляем репозиторий в постоянном месте
-          if [ -d "$REPO_PATH/.git" ]; then
-            echo "Repository exists. Pulling latest changes..."
-            sudo git -C "$REPO_PATH" pull
-          else
+          # --- Подготовка репозитория ---
+          if [ ! -d "$REPO_PATH" ]; then
             echo "Cloning repository to $REPO_PATH..."
-            sudo git clone https://github.com/zhenyapetko/portfolio-site.git "$REPO_PATH"
+            # git clone должен быть от пользователя, который будет запускать docker-compose,
+            # либо нужно настроить права.
+            git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
           fi
           
-          # Выполняем Docker Login
-          sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          echo "Entering project directory: $REPO_PATH"
+          cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
+
+          echo "Pulling latest changes from Git..."
+          git pull origin main || { echo "Failed to pull latest changes"; exit 1; }
           
-          # Переходим в директорию репозитория и запускаем docker-compose
-          echo "Building and deploying from $REPO_PATH..."
-          # `cd $REPO_PATH` гарантирует, что docker-compose будет использовать правильный контекст.
-          # `-f docker-compose.yml` не нужен, если вы уже в этой директории.
-          sudo bash -c "cd $REPO_PATH && docker-compose build portfolio-site && docker-compose up -d"
-          # Если вы хотите, чтобы docker-compose пересоздавал контейнер при обновлении образа:
-          # sudo bash -c "cd $REPO_PATH && docker-compose build portfolio-site && docker-compose up -d --force-recreate portfolio-site"
+          # --- Docker Compose действия ---
+          echo "Stopping existing services..."
+          docker-compose down || echo "No running services to stop or failed gracefully."
           
-          echo "Deployment complete."
+          echo "Building services..."
+          # --no-cache если нужно, но обычно --build достаточно умён, чтобы использовать кэш
+          docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
+          
+          echo "Starting services..."
+          docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
+          
+          echo "Deployment successful."
+        EOF # Конец SSH сессии
+
+    - name: Send Telegram Notification (Success)
+      if: success() # Выполнить только если все предыдущие шаги прошли успешно
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TG_CHAT_ID }}
+        token: ${{ secrets.TG_BOT_TOKEN }}
+        message: |
+          ✅ Deployment Successful!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          View on EC2: http://${{ secrets.SSH_HOST }} (use your actual URL if custom domain)
+
+    - name: Send Telegram Notification (Failure)
+      if: failure() # Выполнить только если какой-либо предыдущий шаг провалился
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TG_CHAT_ID }}
+        token: ${{ secrets.TG_BOT_TOKEN }}
+        message: |
+          ❌ Deployment Failed!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          Please check the GitHub Actions logs for details.
