@@ -81,49 +81,16 @@ jobs:
         token: ${{ secrets.TG_BOT_TOKEN }}
         format: markdown
         message: |
-          ✨ *Deployment Successful!* ✨
-          
-          ---
-          
-          🚀 *Проект:* `${{ github.repository }}`
-          🌿 *Ветка:* `${{ github.ref_name }}`
-          📦 *Коммит:* `${{ github.sha }}`
-          👤 *Автор:* `${{ github.actor }}`
-          
-          ---
-          
-          🌐 *Все сервисы доступны:*
-          
-            *   **Сайт:** [Перейти](http://${{ env.DOMAIN_NAME }})
-            *   **Grafana:** [Панель](http://${{ env.DOMAIN_NAME }}:3000)
-            *   **Prometheus:** [Статус](http://${{ env.DOMAIN_NAME }}:9090)
-          
-          ---
-          
-          ✅ *Все контейнеры запущены и работают!*
-
+          ✅ *Деплой успешен!*
+          [Сайт](http://${{ env.DOMAIN_NAME }}) | [Логи GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    
     - name: Send Telegram Notification (Failure)
       if: failure()
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown # Также указываем формат Markdown для ошибок
+        format: markdown
         message: |
-          🚨 *Deployment Failed!* 🚨
-          
-          ---
-          
-          ❌ *Проект:* `${{ github.repository }}`
-          🌿 *Ветка:* `${{ github.ref_name }}`
-          📦 *Коммит:* `${{ github.sha }}`
-          👤 *Автор:* `${{ github.actor }}`
-          
-          ---
-          
-          🧐 *Пожалуйста, проверьте логи:*
-          [GitHub Actions Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          
-          ---
-          
-          ⚠️ *Возникла ошибка во время деплоя. Срочно примите меры!*
+          ❌ *Деплой провален!*
+          [Логи GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
