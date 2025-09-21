@@ -37,18 +37,18 @@ jobs:
         # и экранируем кавычки, если они нужны внутри команд.
         SSH_SCRIPT="
           REPO_PATH=\"/opt/portfolio-site\" # Путь, где Docker Compose проект на сервере
+
+        echo "Performing Docker system prune..."
+        docker system prune -f
+        docker builder prune -f
+        docker volume prune -f
+
           
           # --- Подготовка репозитория ---
           if [ ! -d \"\$REPO_PATH\" ]; then
             echo \"Cloning repository to \$REPO_PATH...\"
             git clone \"\$REPO_REMOTE_URL\" \"\$REPO_PATH\" || { echo \"Failed to clone repository\"; exit 1; }
           fi
-
-          echo "Cleaning up old Docker resources..."
-        
-          docker system prune -f  # Удаляет неиспользуемые (dangling) образы, контейнеры, сети и build cache
-          docker volume prune -f  # Удаляет неиспользуемые тома
-          docker builder prune -f
           
           echo \"Entering project directory: \$REPO_PATH\"
           cd \"\$REPO_PATH\" || { echo \"Failed to change directory to \$REPO_PATH\"; exit 1; }
@@ -70,62 +70,31 @@ jobs:
         "
         # Передача скрипта одной строкой в SSH, выполняя обрезку пробелов
         # и выполнение как Bash-скрипта на удаленном сервере.
-        # Telegram сообщения здесь не должны быть!
         ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "bash -c '$(echo "$SSH_SCRIPT" | sed -e 's/^[[:space:]]*//')'"
 
-    # --- Telegram-уведомления теперь как отдельные шаги, как и должны быть ---
     - name: Send Telegram Notification (Success)
-      if: success()
+      if: success() 
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown # Указываем формат Markdown
         message: |
-          ✨ *Deployment Successful!* ✨
-          
-          ---
-          
-          🚀 *Проект:* `{{ github.repository }}`
-          🌿 *Ветка:* `{{ github.ref_name }}`
-          📦 *Коммит:* `{{ github.sha }}`
-          
-          ---
-          
-          🌐 *Ваш сайт доступен:*
-          [Перейти на сайт](http://${{ secrets.SSH_HOST }})
-          
-          📊 *Мониторинг Grafana:*
-          [Grafana Dashboard](http://${{ secrets.SSH_HOST }}:3000)
-          
-          📈 *Мониторинг Prometheus:*
-          [Prometheus Status](http://${{ secrets.SSH_HOST }}:9090)
-          
-          ---
-          
-          ✅ *Все сервисы запущены и работают!*
-    
+          ✅ Deployment Successful!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          View on EC2: http://${{ secrets.SSH_HOST }} (use your actual URL if custom domain)
+
     - name: Send Telegram Notification (Failure)
-      if: failure()
+      if: failure() # Выполнить только если какой-либо предыдущий шаг провалился
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown # Также указываем формат Markdown для ошибок
         message: |
-          🚨 *Deployment Failed!* 🚨
-          
-          ---
-          
-          ❌ *Проект:* `{{ github.repository }}`
-          🌿 *Ветка:* `{{ github.ref_name }}`
-          📦 *Коммит:* `{{ github.sha }}`
-          
-          ---
-          
-          🧐 *Пожалуйста, проверьте логи:*
-          [GitHub Actions Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          
-          ---
-          
-          ⚠️ *Возникла ошибка во время деплоя. Срочно примите меры!*
+          ❌ Deployment Failed!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          Please check the GitHub Actions logs for details.
