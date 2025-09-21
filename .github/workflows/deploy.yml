@@ -62,7 +62,7 @@ jobs:
         EOF # Конец SSH сессии
 
     - name: Send Telegram Notification (Success)
-      if: success() # Выполнить только если все предыдущие шаги прошли успешно
+      if: success() 
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
