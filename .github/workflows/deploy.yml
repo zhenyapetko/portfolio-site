@@ -31,41 +31,40 @@ jobs:
 
         echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
 
-        # Оборачиваем все команды для SSH в одну переменную.
-        # Это позволяет избежать проблем с отступами heredoc внутри YAML.
-        SSH_COMMANDS=$(cat << 'END_OF_COMMANDS'
-          # Все команды, которые должны быть выполнены на удаленном сервере.
-          # Здесь отступы НЕ ВАЖНЫ, потому что они внутри строки!
-          REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
+        # Определение всех команд, которые нужно выполнить на удаленном сервере,
+        # в виде одной большой строки.
+        # Здесь мы используем символы новой строки (\n) для разделения команд
+        # и экранируем кавычки, если они нужны внутри команд.
+        SSH_SCRIPT="
+          REPO_PATH=\"/opt/portfolio-site\" # Путь, где Docker Compose проект на сервере
           
           # --- Подготовка репозитория ---
-          if [ ! -d "$REPO_PATH" ]; then
-            echo "Cloning repository to $REPO_PATH..."
-            git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
+          if [ ! -d \"\$REPO_PATH\" ]; then
+            echo \"Cloning repository to \$REPO_PATH...\"
+            git clone \"\$REPO_REMOTE_URL\" \"\$REPO_PATH\" || { echo \"Failed to clone repository\"; exit 1; }
           fi
           
-          echo "Entering project directory: $REPO_PATH"
-          cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
+          echo \"Entering project directory: \$REPO_PATH\"
+          cd \"\$REPO_PATH\" || { echo \"Failed to change directory to \$REPO_PATH\"; exit 1; }
 
-          echo "Pulling latest changes from Git..."
-          git pull origin main || { echo "Failed to pull latest changes"; exit 1; }
+          echo \"Pulling latest changes from Git...\"
+          git pull origin main || { echo \"Failed to pull latest changes\"; exit 1; }
           
           # --- Docker Compose действия ---
-          echo "Stopping existing services..."
-          docker-compose down || echo "No running services to stop or failed gracefully."
+          echo \"Stopping existing services...\"
+          docker-compose down || echo \"No running services to stop or failed gracefully.\"
           
-          echo "Building services..."
-          docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
+          echo \"Building services...\"
+          docker-compose build --no-cache || { echo \"Failed to build Docker images\"; exit 1; }
           
-          echo "Starting services..."
-          docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
+          echo \"Starting services...\"
+          docker-compose up -d --force-recreate || { echo \"Failed to start Docker Compose services\"; exit 1; }
           
-          echo "Deployment successful."
-END_OF_COMMANDS
-        ) # Закрытие переменной
-
-        # Теперь выполняем SSH, передавая команды из переменной через stdin
-        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "${SSH_COMMANDS}"
+          echo \"Deployment successful.\"
+        "
+        # Передача скрипта одной строкой в SSH, выполняя обрезку пробелов
+        # и выполнение как Bash-скрипта на удаленном сервере.
+        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "bash -c '$(echo "$SSH_SCRIPT" | sed -e 's/^[[:space:]]*//')'"
 
     - name: Send Telegram Notification (Success)
       if: success() 
