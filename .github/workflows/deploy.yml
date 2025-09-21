@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # Используем ubuntu-latest для выполнения джоба GitHub Actions
+    runs-on: ubuntu-latest
 
 
     steps:
