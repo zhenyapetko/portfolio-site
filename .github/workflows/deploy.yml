@@ -30,14 +30,17 @@ jobs:
         set -e # Выйти немедленно, если любая команда завершится неудачей
 
         echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
-        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF'
+
+        # Оборачиваем все команды для SSH в одну переменную.
+        # Это позволяет избежать проблем с отступами heredoc внутри YAML.
+        SSH_COMMANDS=$(cat << 'END_OF_COMMANDS'
+          # Все команды, которые должны быть выполнены на удаленном сервере.
+          # Здесь отступы НЕ ВАЖНЫ, потому что они внутри строки!
           REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
           
           # --- Подготовка репозитория ---
           if [ ! -d "$REPO_PATH" ]; then
             echo "Cloning repository to $REPO_PATH..."
-            # git clone должен быть от пользователя, который будет запускать docker-compose,
-            # либо нужно настроить права.
             git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
           fi
           
@@ -52,14 +55,17 @@ jobs:
           docker-compose down || echo "No running services to stop or failed gracefully."
           
           echo "Building services..."
-          # --no-cache если нужно, но обычно --build достаточно умён, чтобы использовать кэш
           docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
           
           echo "Starting services..."
           docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
           
           echo "Deployment successful."
-        END_SSH_COMMANDS
+END_OF_COMMANDS
+        ) # Закрытие переменной
+
+        # Теперь выполняем SSH, передавая команды из переменной через stdin
+        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "${SSH_COMMANDS}"
 
     - name: Send Telegram Notification (Success)
       if: success() 
