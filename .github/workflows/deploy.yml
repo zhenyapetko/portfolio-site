@@ -64,38 +64,40 @@ jobs:
         "
         # Передача скрипта одной строкой в SSH, выполняя обрезку пробелов
         # и выполнение как Bash-скрипта на удаленном сервере.
+        # Telegram сообщения здесь не должны быть!
         ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "bash -c '$(echo "$SSH_SCRIPT" | sed -e 's/^[[:space:]]*//')'"
 
-        - name: Send Telegram Notification (Success)
-          if: success()
-          uses: appleboy/telegram-action@master
-          with:
-            to: ${{ secrets.TG_CHAT_ID }}
-            token: ${{ secrets.TG_BOT_TOKEN }}
-            format: markdown # Указываем формат Markdown
-            message: |
-                ✨ *Deployment Successful!* ✨
+    # --- Telegram-уведомления теперь как отдельные шаги, как и должны быть ---
+    - name: Send Telegram Notification (Success)
+      if: success()
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TG_CHAT_ID }}
+        token: ${{ secrets.TG_BOT_TOKEN }}
+        format: markdown # Указываем формат Markdown
+        message: |
+          ✨ *Deployment Successful!* ✨
           
-                ---
+          ---
           
-                🚀 *Проект:* `{{ github.repository }}`
-                🌿 *Ветка:* `{{ github.ref_name }}`
-                📦 *Коммит:* `{{ github.sha }}`
+          🚀 *Проект:* `{{ github.repository }}`
+          🌿 *Ветка:* `{{ github.ref_name }}`
+          📦 *Коммит:* `{{ github.sha }}`
           
-                ---
+          ---
           
-                🌐 *Ваш сайт доступен:*
-                [Перейти на сайт](http://${{ secrets.SSH_HOST }})
+          🌐 *Ваш сайт доступен:*
+          [Перейти на сайт](http://${{ secrets.SSH_HOST }})
           
-                📊 *Мониторинг Grafana:*
-                [Grafana Dashboard](http://${{ secrets.SSH_HOST }}:3000)
+          📊 *Мониторинг Grafana:*
+          [Grafana Dashboard](http://${{ secrets.SSH_HOST }}:3000)
           
-                📈 *Мониторинг Prometheus:*
-                [Prometheus Status](http://${{ secrets.SSH_HOST }}:9090)
+          📈 *Мониторинг Prometheus:*
+          [Prometheus Status](http://${{ secrets.SSH_HOST }}:9090)
           
-                ---
+          ---
           
-                ✅ *Все сервисы запущены и работают!*
+          ✅ *Все сервисы запущены и работают!*
     
     - name: Send Telegram Notification (Failure)
       if: failure()
