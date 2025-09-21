@@ -83,7 +83,7 @@ jobs:
         message: |
           ✅ *Деплой успешен!*
           
-          [Перейти на сайт](http://${{ env.DOMAIN_NAME }})
+          [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
           [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
     
     - name: Send Telegram Notification (Failure)
