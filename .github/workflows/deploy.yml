@@ -24,77 +24,106 @@ jobs:
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-        REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" # Замените на публичный URL вашего репозитория
+        # Замените на публичный URL вашего репозитория,
+        # если репозиторий приватный, нужно настроить SSH-доступ для Git
+        REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" 
 
       run: |
         set -e # Выйти немедленно, если любая команда завершится неудачей
 
         echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
 
-        # Определение всех команд, которые нужно выполнить на удаленном сервере,
-        # в виде одной большой строки.
-        # Здесь мы используем символы новой строки (\n) для разделения команд
-        # и экранируем кавычки, если они нужны внутри команд.
-        SSH_SCRIPT="
-          REPO_PATH=\"/opt/portfolio-site\" # Путь, где Docker Compose проект на сервере
-
-        echo "Performing Docker system prune..."
-        docker system prune -f
-        docker builder prune -f
-        docker volume prune -f
-
+        # Использование heredoc (EOF) для более чистой передачи многострочного скрипта
+        # Это позволяет избежать проблем с экранированием и подстановкой переменных
+        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF_SSH_SCRIPT'
+          set -e # Обязательно повторяем set -e внутри скрипта на сервере
+          
+          REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
+          
+          # УБЕДИТЬСЯ, ЧТО МЕСТО ЕСТЬ
+          echo "Performing Docker system prune..."
+          docker system prune -f
+          docker builder prune -f
+          docker volume prune -f
           
           # --- Подготовка репозитория ---
-          if [ ! -d \"\$REPO_PATH\" ]; then
-            echo \"Cloning repository to \$REPO_PATH...\"
-            git clone \"\$REPO_REMOTE_URL\" \"\$REPO_PATH\" || { echo \"Failed to clone repository\"; exit 1; }
+          if [ ! -d "$REPO_PATH" ]; then
+            echo "Cloning repository to $REPO_PATH..."
+            git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
           fi
           
-          echo \"Entering project directory: \$REPO_PATH\"
-          cd \"\$REPO_PATH\" || { echo \"Failed to change directory to \$REPO_PATH\"; exit 1; }
+          echo "Entering project directory: $REPO_PATH"
+          cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
 
-          echo \"Pulling latest changes from Git...\"
-          git pull origin main || { echo \"Failed to pull latest changes\"; exit 1; }
+          echo "Pulling latest changes from Git..."
+          git pull origin main || { echo "Failed to pull latest changes"; exit 1; }
           
           # --- Docker Compose действия ---
-          echo \"Stopping existing services...\"
-          docker-compose down || echo \"No running services to stop or failed gracefully.\"
+          echo "Stopping existing services..."
+          docker-compose down || echo "No running services to stop or failed gracefully."
           
-          echo \"Building services...\"
-          docker-compose build --no-cache || { echo \"Failed to build Docker images\"; exit 1; }
+          echo "Building services..."
+          docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
           
-          echo \"Starting services...\"
-          docker-compose up -d --force-recreate || { echo \"Failed to start Docker Compose services\"; exit 1; }
+          echo "Starting services..."
+          docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
           
-          echo \"Deployment successful.\"
-        "
-        # Передача скрипта одной строкой в SSH, выполняя обрезку пробелов
-        # и выполнение как Bash-скрипта на удаленном сервере.
-        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "bash -c '$(echo "$SSH_SCRIPT" | sed -e 's/^[[:space:]]*//')'"
+          echo "Deployment successful."
+        EOF_SSH_SCRIPT
 
+    # --- Telegram-уведомления теперь как отдельные шаги, как и должны быть ---
     - name: Send Telegram Notification (Success)
-      if: success() 
+      if: success()
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
+        format: markdown # Указываем формат Markdown
         message: |
-          ✅ Deployment Successful!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          View on EC2: http://${{ secrets.SSH_HOST }} (use your actual URL if custom domain)
-
+          ✨ *Deployment Successful!* ✨
+          
+          ---
+          
+          🚀 *Проект:* `{{ github.repository }}`
+          🌿 *Ветка:* `{{ github.ref_name }}`
+          📦 *Коммит:* `{{ github.sha }}`
+          
+          ---
+          
+          🌐 *Ваш сайт доступен:*
+          [Перейти на сайт](http://${{ secrets.SSH_HOST }})
+          
+          📊 *Мониторинг Grafana:*
+          [Grafana Dashboard](http://${{ secrets.SSH_HOST }}:3000)
+          
+          📈 *Мониторинг Prometheus:*
+          [Prometheus Status](http://${{ secrets.SSH_HOST }}:9090)
+          
+          ---
+          
+          ✅ *Все сервисы запущены и работают!*
+    
     - name: Send Telegram Notification (Failure)
-      if: failure() # Выполнить только если какой-либо предыдущий шаг провалился
+      if: failure()
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
+        format: markdown # Также указываем формат Markdown для ошибок
         message: |
-          ❌ Deployment Failed!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          Please check the GitHub Actions logs for details.
+          🚨 *Deployment Failed!* 🚨
+          
+          ---
+          
+          ❌ *Проект:* `{{ github.repository }}`
+          🌿 *Ветка:* `{{ github.ref_name }}`
+          📦 *Коммит:* `{{ github.sha }}`
+          
+          ---
+          
+          🧐 *Пожалуйста, проверьте логи:*
+          [GitHub Actions Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          ---
+          
+          ⚠️ *Возникла ошибка во время деплоя. Срочно примите меры!*
