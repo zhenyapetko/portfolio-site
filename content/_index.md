@@ -12,7 +12,7 @@ type: page
 
 Это мой персональный сайт-портфолио. Здесь вы найдёте информацию о моих проектах, навыках и опыте в DevOps.
 
-### Ключевые навыки:
+### Контакты:
 - Контейнеризация: Docker
 - IaC: Terraform, Ansible
 - CI/CD: GitHub Actions
@@ -20,5 +20,3 @@ type: page
 
 ### Мои проекты на GitHub:
 [Посмотреть мои репозитории](https://github.com/zhenyapetko?tab=repositories)
-
-![Моё фото](/photo.jpg)  <!-- Замени photo.jpg на своё фото в static/ -->

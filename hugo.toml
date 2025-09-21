@@ -1,6 +1,6 @@
 baseURL = "https://e-petko.dev/"
 languageCode = "ru-ru"
-title = "Zhenya Petko Portfolio Showcase"
+title = "Zhenya Petko Portfolio"
 theme = "beautifulhugo"
 favicon = "favicon.ico"
 
