@@ -79,7 +79,7 @@ jobs:
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown # Указываем формат Markdown
+        format: markdown
         message: |
           ✨ *Deployment Successful!* ✨
           
@@ -94,9 +94,9 @@ jobs:
           
           🌐 *Все сервисы доступны:*
           
-          *   **Сайт:** [Перейти](${ (startsWith(env.DOMAIN_NAME, 'http://') || startsWith(env.DOMAIN_NAME, 'https://')) && env.DOMAIN_NAME || format('http://{0}', env.DOMAIN_NAME) })
-          *   **Grafana:** [Панель](${ (startsWith(env.DOMAIN_NAME, 'http://') || startsWith(env.DOMAIN_NAME, 'https://')) && env.DOMAIN_NAME || format('http://{0}', env.DOMAIN_NAME) }:3000)
-          *   **Prometheus:** [Статус](${ (startsWith(env.DOMAIN_NAME, 'http://') || startsWith(env.DOMAIN_NAME, 'https://')) && env.DOMAIN_NAME || format('http://{0}', env.DOMAIN_NAME) }:9090)
+            *   **Сайт:** [Перейти](http://${{ env.DOMAIN_NAME }})
+            *   **Grafana:** [Панель](http://${{ env.DOMAIN_NAME }}:3000)
+            *   **Prometheus:** [Статус](http://${{ env.DOMAIN_NAME }}:9090)
           
           ---
           
