@@ -59,7 +59,7 @@ jobs:
           docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
           
           echo "Deployment successful."
-        EOF # Конец SSH сессии
+EOF
 
     - name: Send Telegram Notification (Success)
       if: success() 
