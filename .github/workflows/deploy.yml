@@ -43,6 +43,12 @@ jobs:
             echo \"Cloning repository to \$REPO_PATH...\"
             git clone \"\$REPO_REMOTE_URL\" \"\$REPO_PATH\" || { echo \"Failed to clone repository\"; exit 1; }
           fi
+
+          echo "Cleaning up old Docker resources..."
+        
+          docker system prune -f  # Удаляет неиспользуемые (dangling) образы, контейнеры, сети и build cache
+          docker volume prune -f  # Удаляет неиспользуемые тома
+          docker builder prune -f
           
           echo \"Entering project directory: \$REPO_PATH\"
           cd \"\$REPO_PATH\" || { echo \"Failed to change directory to \$REPO_PATH\"; exit 1; }

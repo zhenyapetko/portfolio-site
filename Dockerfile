@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     build-essential \
     file \
+    apt-get clean && \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Блок установки Hugo ---
