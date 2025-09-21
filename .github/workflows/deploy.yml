@@ -66,29 +66,58 @@ jobs:
         # и выполнение как Bash-скрипта на удаленном сервере.
         ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "bash -c '$(echo "$SSH_SCRIPT" | sed -e 's/^[[:space:]]*//')'"
 
-    - name: Send Telegram Notification (Success)
-      if: success() 
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TG_CHAT_ID }}
-        token: ${{ secrets.TG_BOT_TOKEN }}
-        message: |
-          ✅ Deployment Successful!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          View on EC2: http://${{ secrets.SSH_HOST }} (use your actual URL if custom domain)
-
+        - name: Send Telegram Notification (Success)
+          if: success()
+          uses: appleboy/telegram-action@master
+          with:
+            to: ${{ secrets.TG_CHAT_ID }}
+            token: ${{ secrets.TG_BOT_TOKEN }}
+            format: markdown # Указываем формат Markdown
+            message: |
+                ✨ *Deployment Successful!* ✨
+          
+                ---
+          
+                🚀 *Проект:* `{{ github.repository }}`
+                🌿 *Ветка:* `{{ github.ref_name }}`
+                📦 *Коммит:* `{{ github.sha }}`
+          
+                ---
+          
+                🌐 *Ваш сайт доступен:*
+                [Перейти на сайт](http://${{ secrets.SSH_HOST }})
+          
+                📊 *Мониторинг Grafana:*
+                [Grafana Dashboard](http://${{ secrets.SSH_HOST }}:3000)
+          
+                📈 *Мониторинг Prometheus:*
+                [Prometheus Status](http://${{ secrets.SSH_HOST }}:9090)
+          
+                ---
+          
+                ✅ *Все сервисы запущены и работают!*
+    
     - name: Send Telegram Notification (Failure)
-      if: failure() # Выполнить только если какой-либо предыдущий шаг провалился
+      if: failure()
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TG_CHAT_ID }}
         token: ${{ secrets.TG_BOT_TOKEN }}
+        format: markdown # Также указываем формат Markdown для ошибок
         message: |
-          ❌ Deployment Failed!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          Please check the GitHub Actions logs for details.
+          🚨 *Deployment Failed!* 🚨
+          
+          ---
+          
+          ❌ *Проект:* `{{ github.repository }}`
+          🌿 *Ветка:* `{{ github.ref_name }}`
+          📦 *Коммит:* `{{ github.sha }}`
+          
+          ---
+          
+          🧐 *Пожалуйста, проверьте логи:*
+          [GitHub Actions Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          ---
+          
+          ⚠️ *Возникла ошибка во время деплоя. Срочно примите меры!*
