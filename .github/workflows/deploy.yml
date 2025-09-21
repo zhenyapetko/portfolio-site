@@ -82,7 +82,9 @@ jobs:
         format: markdown
         message: |
           ✅ *Деплой успешен!*
-          [Сайт](http://${{ env.DOMAIN_NAME }}) | [Логи GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          [Перейти на сайт](http://${{ env.DOMAIN_NAME }})
+          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
     
     - name: Send Telegram Notification (Failure)
       if: failure()
@@ -93,4 +95,5 @@ jobs:
         format: markdown
         message: |
           ❌ *Деплой провален!*
-          [Логи GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
