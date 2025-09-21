@@ -8,12 +8,21 @@ services:
       #- ./content:/src/content 
       #- ./static:/src/static
       #- ./config.toml:/src/config.toml 
-      - /etc/letsencrypt/:/etc/letsencrypt/:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
     depends_on:  # Ждёт Prometheus
       - prometheus
     networks:
       - monitoring
     restart: unless-stopped
+
+  certbot: # НОВЫЙ СЕРВИС: Certbot
+    image: certbot/certbot
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    networks:
+      - monitoring  
 
   prometheus:  
     image: prom/prometheus:latest
@@ -60,6 +69,9 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  certbot_webroot:
+  certbot_certs:
+
 
 networks:
   monitoring:
