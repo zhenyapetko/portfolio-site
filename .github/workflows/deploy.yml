@@ -26,46 +26,46 @@ jobs:
         # Мы только собираем образ, пока не пушим его.
         run: docker compose build portfolio-site
 
-  # Job 2: Тестирует только что собранный образ portfolio-site
-  test-image:
+  test-image: # Отдельный job для теста
     runs-on: ubuntu-latest
-    needs: build-image # Зависит от успешной сборки образа
-    
+    needs: build-image
+    env:
+      TEST_IMAGE_NAME: ${{ needs.build.outputs.image_name }} 
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Docker Buildx and Compose v2
-        uses: docker/setup-buildx-action@v2
-      
-      - name: Log in to Docker Hub (for potentially pulling base images if needed)
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Log in to Docker Hub (for pulling the freshly built image if needed, though not strictly required after `build`)
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Run portfolio-site container for testing
-        # Запускаем только тестируемый сервис в фоне.
-        # Это потребует, чтобы все зависимости этого сервиса были либо уже в образе,
-        # либо чтобы они были запущены как часть этого же тестового compose file.
-        # Для простоты, запускаем только portfolio-site.
-        run: |
-          docker compose up -d portfolio-site
-          # Даем контейнеру немного времени на запуск
-          sleep 10s 
+    - name: Run simple container launch check
+      run: |
+        set -e
+        echo "Running temporary container for simple launch check using image: $TEST_IMAGE_NAME"
+        
+        # Запускаем контейнер в фоновом режиме.
+        docker run -d --name portfolio-site-test -p 8080:80 "$TEST_IMAGE_NAME" || { echo "ERROR: Could not start portfolio-site-test container!"; exit 1; }
+        
+        sleep 5 # Даем контейнеру немного времени на запуск.
+        
+        echo "Checking container status..."
+        
+        CONTAINER_STATUS=$(docker inspect portfolio-site-test --format='{{.State.Status}}')
+        
+        if [ "$CONTAINER_STATUS" == "running" ]; then
+            echo "Simple launch check passed: Container 'portfolio-site-test' is running."
+        else
+            echo "Error: Simple launch check failed. Container 'portfolio-site-test' is not running."
+            echo "Current status: $CONTAINER_STATUS"
+            docker logs portfolio-site-test # Выводим логи для отладки
+            exit 1
+        fi
+        
+        echo "Cleaning up test container..."
+        docker rm -f portfolio-site-test || true # Удаляем контейнер после теста
 
-      - name: Test portfolio-site HTTP response
-        # Простая проверка доступности по HTTP
-        run: |
-          # В зависимости от того, как ты настроил порты в docker-compose.yml для тестирования.
-          # Если порт 8080 для портфолио, то:
-          curl -v --fail http://localhost:443/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
-          # Если порт 80:
-          # curl -v --fail http://localhost/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
 
-      - name: Stop and remove test container
-        if: always() # Выполнить даже если тесты упали, чтобы очистить ресурсы
-        run: docker compose down
 
   # Job 3: Пушит кастомный образ portfolio-site в Docker Hub (только после успешного теста)
   push-image:
