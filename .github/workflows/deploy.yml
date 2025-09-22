@@ -81,27 +81,23 @@ jobs:
             git clone "${GIT_REPO_SSH_URL}" "${DEPLOY_PATH}" || { echo "ERROR: Failed to clone repository ${GIT_REPO_SSH_URL}"; exit 1; }
           fi
           
-          echo "Entering project directory: ${DEPLOY_PATH}"
-          cd "${DEPLOY_PATH}" || { echo "ERROR: Failed to change directory to ${DEPLOY_PATH}"; exit 1; }
+          
+          cd "${DEPLOY_PATH}"
 
-          echo "Pulling latest git changes for configuration files..."
-          git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
+          
+          git pull origin main
 
-          echo "Performing Docker system cleanup..."
           docker system prune -af
           docker volume prune -f
           
-          echo "Stopping existing services..."
-          docker compose down --remove-orphans || true 
+          docker compose down --remove-orphans 
 
           echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
-          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin }
 
-          echo "Pulling latest Docker image from Docker Hub, image: ${DOCKER_IMAGE_NAME}..."
-          docker pull "${DOCKER_IMAGE_NAME}" || { echo "ERROR: Failed to pull latest image from Docker Hub!"; exit 1; }
           
-          echo "Starting services..."
-          docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
+          docker pull "${DOCKER_IMAGE_NAME}"
+          docker compose up -d --force-recreate --remove-orphans
           
           echo "--- Docker Compose services started. ---"
           
