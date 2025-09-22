@@ -1,5 +1,6 @@
 services:
-  portfolio-site:  # сайт из Dockerfile
+  portfolio-site: 
+    image: zhenyapetko/portfolio-site:latest
     build: .  
     ports:
       - "80:80"  # Локал:8080 -> Nginx:80
@@ -23,6 +24,7 @@ services:
       - certbot_certs:/etc/letsencrypt
     networks:
       - monitoring  
+    restart: unless-stopped
 
   prometheus:  
     image: prom/prometheus:latest
@@ -64,6 +66,8 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
+    networks:
+      - monitoring
     restart: unless-stopped
 
 volumes:

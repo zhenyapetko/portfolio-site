@@ -1,32 +1,49 @@
-name: CI/CD Pipeline to EC2
+name: CI/CD Pipeline to EC2 With Image Push
 
 on:
   push:
-    branches: [main] # Запускать при пуше в ветку main
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0 # Полная история для Git Submodules, если используются
+        fetch-depth: 0
 
+    # Шаг 1: Войти в Docker Hub на GitHub Actions раннере
+    - name: Log in to Docker Hub (GitHub Actions Runner)
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # Шаг 2: Собрать Docker-образы на GitHub Actions раннере
+    # Будет собран образ 'zhenyapetko/portfolio-site:latest'
+    - name: Build Docker images (on GitHub Actions Runner)
+      run: docker-compose build portfolio-site # Собираем только portfolio-site, остальные - готовые
+
+    # Шаг 3: Пуш собранного образа в Docker Hub
+    - name: Push Docker images to Docker Hub
+      run: docker-compose push portfolio-site # Пушим только portfolio-site
+
+    # --- Подготовка к SSH-доступу ---
     - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.5.3 # Более удобный способ настройки SSH
+      uses: webfactory/ssh-agent@v0.5.3
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    # --- Основной скрипт деплоя на EC2 по SSH ---
     - name: Deploy to Server via SSH
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
         DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
-        # Замените на публичный URL вашего репозитория,
-        # если репозиторий приватный, нужно настроить SSH-доступ для Git
+        DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} # Теперь этот секрет передается на удаленный хост
         REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" 
 
       run: |
@@ -34,20 +51,18 @@ jobs:
 
         echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
 
-        # Использование heredoc (EOF) для более чистой передачи многострочного скрипта
-        # Это позволяет избежать проблем с экранированием и подстановкой переменных
         ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF_SSH_SCRIPT'
           set -e # Обязательно повторяем set -e внутри скрипта на сервере
           
           REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
           
-          # УБЕДИТЬСЯ, ЧТО МЕСТО ЕСТЬ
+          # УБЕДИТЬСЯ, ЧТО ЕСТЬ МЕСТО
           echo "Performing Docker system prune..."
           docker system prune -f
           docker builder prune -f
           docker volume prune -f
           
-          # --- Подготовка репозитория ---
+          # --- Подготовка репозитория на EC2 ---
           if [ ! -d "$REPO_PATH" ]; then
             echo "Cloning repository to $REPO_PATH..."
             git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
@@ -56,23 +71,54 @@ jobs:
           echo "Entering project directory: $REPO_PATH"
           cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
 
-          echo "Pulling latest changes from Git..."
-          git pull origin main || { echo "Failed to pull latest changes"; exit 1; }
-          
-          # --- Docker Compose действия ---
+          # Pull конфиги: docker-compose.yml, prometheus.yml, nginx/site.conf
+          echo "Pulling latest git changes for configuration files..."
+          git pull origin main || { echo "Failed to pull latest configuration changes"; exit 1; }
+
+          # --- Docker Compose действия на EC2 ---
           echo "Stopping existing services..."
-          docker-compose down || echo "No running services to stop or failed gracefully."
-          
-          echo "Building services..."
-          docker-compose build --no-cache || { echo "Failed to build Docker images"; exit 1; }
+          docker-compose down || echo "No running services to stop or failed gracefully." # Убираем -v, он удаляет анонимные тома Certbot
+
+          echo "Logging into Docker Hub on EC2..."
+          # Используем переданный DOCKER_PASSWORD для входа
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "Failed to login to Docker Hub on EC2!"; exit 1; }
+
+          echo "Pulling latest Docker images from Docker Hub..."
+          docker-compose pull || { echo "Failed to pull images from Docker Hub!"; exit 1; }
           
           echo "Starting services..."
-          docker-compose up -d --force-recreate || { echo "Failed to start Docker Compose services"; exit 1; }
+          docker-compose up -d --force-recreate --no-deps || { echo "Failed to start Docker Compose services!"; exit 1; }
+          
+          # --- БЛОК ТЕСТИРОВАНИЯ ---
+          echo "Running post-deployment health check..."
+          
+          ATTEMPTS=10 # Количество попыток
+          DELAY=5     # Задержка между попытками в секундах
+          
+          TARGET_URL="http://127.0.0.1" # Nginx слушает на 80 порту хоста (который доступен как 127.0.0.1)
+
+          for i in $(seq 1 $ATTEMPTS); do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL")
+              echo "Attempt $i: Received HTTP code $HTTP_CODE from $TARGET_URL"
+              
+              if [ "$HTTP_CODE" -eq 200 ]; then
+                  echo "Test passed: Nginx is serving the site (HTTP 200 OK)."
+                  break
+              fi
+              
+              echo "Retrying in $DELAY seconds..."
+              sleep "$DELAY"
+              
+              if [ "$i" -eq "$ATTEMPTS" ]; then
+                  echo "Error: Nginx did not return 200 OK for $TARGET_URL after $ATTEMPTS attempts. Last HTTP code: $HTTP_CODE"
+                  exit 1
+              fi
+          done
           
           echo "Deployment successful."
         EOF_SSH_SCRIPT
 
-    # --- Telegram-уведомления теперь как отдельные шаги, как и должны быть ---
+    # --- Telegram-уведомления ---
     - name: Send Telegram Notification (Success)
       if: success()
       uses: appleboy/telegram-action@master
