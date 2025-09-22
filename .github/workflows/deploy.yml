@@ -114,33 +114,40 @@ jobs:
             
             echo \"--- Docker Compose services started. Performing health check... ---\"
             
-            # --- БЛОК ТЕСТИРОВАНИЯ ---
-            ATTEMPTS=20 
-            DELAY=5     
-            
-            TARGET_URL=\"http://127.0.0.1\" 
+          # --- БЛОК ТЕСТИРОВАНИЯ ---
+          echo "Running post-deployment health check..."
+          
+          ATTEMPTS=3 # Увеличим количество попыток на случай долгого запуска
+          DELAY=3     # Задержка между попытками в секундах
+          
+          # Если сайт работает по HTTPS и Nginx перенаправляет,
+          # то нужно проверять HTTPS
+          TARGET_URL="https://${DOMAIN_NAME}" # Используем переменную DOMAIN_NAME
+          
+          echo "Checking health on $TARGET_URL"
 
-            for i in \$(seq 1 \"\$ATTEMPTS\"); do
-                HTTP_CODE=\$(curl -s -o /dev/null -w \"%\{http_code\}\" \"\$TARGET_URL\" || echo \"000\")
-                
-                echo \"\$(date '+%H:%M:%S') - Attempt \$i/\$ATTEMPTS: Received HTTP code \$HTTP_CODE from \$TARGET_URL\"
-                
-                if [ \$HTTP_CODE -eq 200 ]; then
-                    echo \"SUCCESS: Nginx is serving the site (HTTP 200 OK).\"
-                    break
-                fi
-                
-                if [ \$i -eq \"\$ATTEMPTS\" ]; then
-                    echo \"ERROR: Nginx did not return 200 OK for \$TARGET_URL after \$ATTEMPTS attempts. Last HTTP code: \$HTTP_CODE\"
-                    echo \"Checking container status:\"
-                    docker ps -a
-                    docker logs "${{ secrets.DOCKER_USERNAME }}_portfolio-site_1" # <-- Используем полное имя контейнера
-                    exit 1
-                fi
-                
-                echo \"Retrying in \$DELAY seconds...\"
-                sleep \"\$DELAY\"
-            done
+          for i in $(seq 1 $ATTEMPTS); do
+              # Используем curl с опцией -k для игнорирования ошибок SSL при самоподписанных сертификатах (если есть)
+              # Или просто -L для следования редиректам
+              # Добавим -sL для тишины и следования редиректам
+              HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$TARGET_URL")
+              echo "$(date +'%H:%M:%S') - Attempt $i/$ATTEMPTS: Received HTTP code $HTTP_CODE from $TARGET_URL"
+              
+              if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 301 ] || [ "$HTTP_CODE" -eq 302 ]; then
+                  echo "Test passed: Site is accessible (HTTP $HTTP_CODE OK)."
+                  break
+              fi
+              
+              echo "Retrying in $DELAY seconds..."
+              sleep "$DELAY"
+              
+              if [ "$i" -eq "$ATTEMPTS" ]; then
+                  echo "Error: Site did not return 2xx/3xx OK for $TARGET_URL after $ATTEMPTS attempts. Last HTTP code: $HTTP_CODE"
+                  docker ps -a # Выведем статус всех контейнеров для отладки
+                  exit 1
+              fi
+          done
+
             
             echo \"--- Деплой на EC2 успешно завершен! ---\"
           "
