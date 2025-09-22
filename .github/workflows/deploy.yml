@@ -5,141 +5,179 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  # Job для Сборки и Пуша Образа
+  build-and-push:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Шаг 1: Войти в Docker Hub на GitHub Actions раннере
-    - name: Log in to Docker Hub (GitHub Actions Runner)
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        # Вход в ваш Docker Registry (например, Docker Hub)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }} # Убедитесь, что это PAT, у которого есть права на запись!
 
-    # Шаг 2: Собрать Docker-образы на GitHub Actions раннере
-    # Будет собран образ 'zhenyapetko/portfolio-site:latest'
-    - name: Build Docker images (on GitHub Actions Runner)
-      run: docker-compose build portfolio-site # Собираем только portfolio-site, остальные - готовые
+      - name: Set up Docker Buildx
+        # Необходим для некоторых функций сборки Docker
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build and push portfolio-site Docker image
+        # Этот экшен сам соберет образ из Dockerfile и запушит его в Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Указывает на текущую директорию как контекст сборки
+          file: ./Dockerfile # Указывает на ваш Dockerfile
+          push: true # Разрешает пуш образа
+          tags: ${{ secrets.DOCKER_USERNAME }}/portfolio-site:latest # Имя образа и тег
+          cache-from: type=gha # Для ускорения повторных сборок
+          cache-to: type=gha,mode=max # Для ускорения повторных сборок
 
-    # Шаг 3: Пуш собранного образа в Docker Hub
-    - name: Push Docker images to Docker Hub
-      run: docker-compose push portfolio-site # Пушим только portfolio-site
+  # Job для Развертывания на EC2
+  deploy-to-ec2:
+    needs: build-and-push # Этот job будет запускаться только после успешного build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Нужен для git pull на сервере, если вы не клонируете каждый раз
 
-    # --- Подготовка к SSH-доступу ---
-    - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # Шаг 1: Настройка SSH-агента для доступа к EC2
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    # --- Основной скрипт деплоя на EC2 по SSH ---
-    - name: Deploy to Server via SSH
-      env:
-        SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-        DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
-        DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} # Теперь этот секрет передается на удаленный хост
-        REPO_REMOTE_URL: "https://github.com/zhenyapetko/portfolio-site.git" 
-
-      run: |
-        set -e # Выйти немедленно, если любая команда завершится неудачей
-
-        echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
-
-        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF_SSH_SCRIPT'
-          set -e # Обязательно повторяем set -e внутри скрипта на сервере
+      # Шаг 2: Основной скрипт деплоя на EC2 по SSH
+      - name: Deploy to Server via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          REPO_REMOTE_URL: "https://github.com/${{ github.repository }}.git" # Автоматически формируем URL репозитория
+          IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/portfolio-site:latest # Полное имя образа
           
-          REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
-          
-          # УБЕДИТЬСЯ, ЧТО ЕСТЬ МЕСТО
-          echo "Performing Docker system prune..."
-          docker system prune -f
-          docker builder prune -f
-          docker volume prune -f
-          
-          # --- Подготовка репозитория на EC2 ---
-          if [ ! -d "$REPO_PATH" ]; then
-            echo "Cloning repository to $REPO_PATH..."
-            git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "Failed to clone repository"; exit 1; }
-          fi
-          
-          echo "Entering project directory: $REPO_PATH"
-          cd "$REPO_PATH" || { echo "Failed to change directory to $REPO_PATH"; exit 1; }
+        run: |
+          set -e # Выйти немедленно, если любая команда завершится неудачей
 
-          # Pull конфиги: docker-compose.yml, prometheus.yml, nginx/site.conf
-          echo "Pulling latest git changes for configuration files..."
-          git pull origin main || { echo "Failed to pull latest configuration changes"; exit 1; }
+          echo "Connecting to ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }}"
 
-          # --- Docker Compose действия на EC2 ---
-          echo "Stopping existing services..."
-          docker-compose down || echo "No running services to stop or failed gracefully." # Убираем -v, он удаляет анонимные тома Certbot
+          # Использование `ssh -T` для выполнения нескольких команд на удаленном сервере.
+          # `StrictHostKeyChecking=no` следует использовать с осторожностью. В продакшене лучше заранее добавить fingerprint.
+          ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF_SSH_SCRIPT'
+            set -e # Обязательно повторяем set -e внутри скрипта на сервере
+            
+            REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
+            
+            echo "--- Выполнение скрипта деплоя на удаленном сервере ---"
 
-          echo "Logging into Docker Hub on EC2..."
-          # Используем переданный DOCKER_PASSWORD для входа
-          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "Failed to login to Docker Hub on EC2!"; exit 1; }
+            # --- Обновление или клонирование репозитория ---
+            if [ -d "$REPO_PATH/.git" ]; then
+              echo "Repository already exists, pulling latest changes..."
+              cd "$REPO_PATH" || { echo "ERROR: Failed to change directory to $REPO_PATH"; exit 1; }
+              git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
+            else
+              echo "Repository not found at $REPO_PATH, cloning it..."
+              # Создаем директорию, если она не существует
+              mkdir -p "$REPO_PATH" 
+              git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "ERROR: Failed to clone repository"; exit 1; }
+              cd "$REPO_PATH" || { echo "ERROR: Failed to change directory to $REPO_PATH after clone"; exit 1; }
+            fi
 
-          echo "Pulling latest Docker images from Docker Hub..."
-          docker-compose pull || { echo "Failed to pull images from Docker Hub!"; exit 1; }
-          
-          echo "Starting services..."
-          docker-compose up -d --force-recreate --no-deps || { echo "Failed to start Docker Compose services!"; exit 1; }
-          
-          # --- БЛОК ТЕСТИРОВАНИЯ ---
-          echo "Running post-deployment health check..."
-          
-          ATTEMPTS=10 # Количество попыток
-          DELAY=5     # Задержка между попытками в секундах
-          
-          TARGET_URL="http://127.0.0.1" # Nginx слушает на 80 порту хоста (который доступен как 127.0.0.1)
+            # --- Очистка Docker ---
+            echo "Performing Docker system cleanup..."
+            docker system prune -af # clean all unused (containers, images, networks) forcefully
+            docker volume prune -f  # clean all unused volumes forcefully
 
-          for i in $(seq 1 $ATTEMPTS); do
-              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL")
-              echo "Attempt $i: Received HTTP code $HTTP_CODE from $TARGET_URL"
-              
-              if [ "$HTTP_CODE" -eq 200 ]; then
-                  echo "Test passed: Nginx is serving the site (HTTP 200 OK)."
-                  break
-              fi
-              
-              echo "Retrying in $DELAY seconds..."
-              sleep "$DELAY"
-              
-              if [ "$i" -eq "$ATTEMPTS" ]; then
-                  echo "Error: Nginx did not return 200 OK for $TARGET_URL after $ATTEMPTS attempts. Last HTTP code: $HTTP_CODE"
-                  exit 1
-              fi
-          done
-          
-          echo "Deployment successful."
-        EOF_SSH_SCRIPT
+            # --- Вход в Docker Hub на EC2 (для pull приватных образов) ---
+            echo "Logging into Docker Hub on EC2..."
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
+
+            # --- Docker Compose действия на EC2 ---
+            echo "Stopping existing services..."
+            # Используем `docker compose` (с пробелом) вместо `docker-compose` (с дефисом)
+            # `--remove-orphans` удалит контейнеры, которых нет в текущем docker-compose.yml
+            # `|| true` позволяет не прерывать скрипт, если контейнеров еще нет
+            docker compose down --remove-orphans || true 
+
+            echo "Pulling latest Docker image (${IMAGE_NAME})..."
+            # Вместо `docker compose pull` явно тянем только наш образ Hugo/Nginx
+            # Это гарантирует, что мы получим именно тот образ, который только что запушили
+            docker pull "${IMAGE_NAME}" || { echo "ERROR: Failed to pull latest image from Docker Hub!"; exit 1; }
+
+            echo "Starting services..."
+            # `--force-recreate` принудительно пересоздаст контейнеры (нужно для нового образа)
+            # `--build` здесь НЕ нужен, так как образ уже собран и спулен
+            # `--remove-orphans` повторно на случай, если что-то появилось
+            docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
+            
+            echo "--- Docker Compose services started. Performing health check... ---"
+            
+            # --- БЛОК ТЕСТИРОВАНИЯ ---
+            ATTEMPTS=20 # Количество попыток
+            DELAY=5     # Задержка между попытками в секундах
+            
+            # Предполагаем, что Nginx на EC2 слушает на 80 порту хоста,
+            # и этот порт доступен локально через 127.0.0.1
+            TARGET_URL="http://127.0.0.1" 
+
+            for i in $(seq 1 "$ATTEMPTS"); do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL" || echo "000") # curl может упасть
+                
+                echo "$(date '+%H:%M:%S') - Attempt $i/$ATTEMPTS: Received HTTP code $HTTP_CODE from $TARGET_URL"
+                
+                if [ "$HTTP_CODE" -eq 200 ]; then
+                    echo "SUCCESS: Nginx is serving the site (HTTP 200 OK)."
+                    break
+                fi
+                
+                if [ "$i" -eq "$ATTEMPTS" ]; then
+                    echo "ERROR: Nginx did not return 200 OK for $TARGET_URL after $ATTEMPTS attempts. Last HTTP code: $HTTP_CODE"
+                    echo "Checking container status:"
+                    docker ps -a
+                    docker logs portfolio-site-portfolio-site-1 # Просмотрите логи вашего основного контейнера Nginx
+                    exit 1
+                fi
+                
+                echo "Retrying in $DELAY seconds..."
+                sleep "$DELAY"
+            done
+            
+            echo "--- Деплой на EC2 успешно завершен! ---"
+          EOF_SSH_SCRIPT
 
     # --- Telegram-уведомления ---
-    - name: Send Telegram Notification (Success)
-      if: success()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TG_CHAT_ID }}
-        token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown
-        message: |
-          ✅ *Деплой успешен!*
+      - name: Send Telegram Notification (Success)
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ✅ *Деплой успешен!*
+            *Репозиторий:* `${{ github.repository }}`
+            *Ветка:* `${{ github.ref_name }}`
+            *Коммит:* `${{ github.sha }}`
           
-          [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
-          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
+            [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
     
-    - name: Send Telegram Notification (Failure)
-      if: failure()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TG_CHAT_ID }}
-        token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown
-        message: |
-          ❌ *Деплой провален!*
+      - name: Send Telegram Notification (Failure)
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ❌ *Деплой провален!*
+            *Репозиторий:* `${{ github.repository }}`
+            *Ветка:* `${{ github.ref_name }}`
+            *Коммит:* `${{ github.sha }}`
           
-          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
