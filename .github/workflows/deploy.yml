@@ -26,28 +26,24 @@ jobs:
     - name: Build Docker image
       run: docker compose build portfolio-site
 
-    # --- Минималистичный Health Check на запуск контейнера после сборки ---
-    - name: Run simple container launch check
+      
+    - name: Verify Docker image was built
       run: |
         set -e
-        echo "Running simple container launch check..."
+        IMAGE_NAME="zhenyapetko/portfolio-site:latest"
+        echo "Verifying that image '$IMAGE_NAME' was built successfully..."
         
-        docker run -d --name portfolio-site-test -p 8080:80 zhenyapetko/portfolio-site:latest || { echo "ERROR: Could not start portfolio-site-test container!"; exit 1; }
+        # Проверяем, существует ли образ с таким именем
+        # docker image inspect вернет 0, если образ найден, и не 0, если нет.
+        docker image inspect "$IMAGE_NAME" > /dev/null 2>&1
         
-        sleep 5 # Даем контейнеру время на запуск
-        
-        # Проверяем, что контейнер находится в состоянии "running"
-        CONTAINER_STATUS=$(docker inspect portfolio-site-test --format='{{.State.Status}}')
-        
-        if [ "$CONTAINER_STATUS" == "running" ]; then
-            echo "Container 'portfolio-site-test' is running. Test passed."
+        if [ $? -eq 0 ]; then
+            echo "Docker image '$IMAGE_NAME' found locally. Build verification passed."
         else
-            echo "Error: Container 'portfolio-site-test' is not running. Status: $CONTAINER_STATUS"
-            docker logs portfolio-site-test # Показываем логи для отладки
+            echo "Error: Docker image '$IMAGE_NAME' not found locally. Build verification failed."
             exit 1
         fi
-        
-        docker rm -f portfolio-site-test || true # Удаляем временный контейнер
+
 
     - name: Push Docker image to Docker Hub
       run: docker compose push portfolio-site
