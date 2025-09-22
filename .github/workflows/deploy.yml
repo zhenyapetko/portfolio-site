@@ -1,180 +1,139 @@
-name: CI/CD Pipeline to EC2 With Full Docker Compose Build/Push
+name: CI/CD Pipeline to EC2 With Image Push
 
 on:
   push:
     branches: [main]
 
 jobs:
-  # Job 1: Собирает только кастомный образ portfolio-site
-  build-image:
+  deploy: # Одно Job, но с логичным порядком шагов
     runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx and Compose v2
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to Docker Hub (for potentially pulling base images if needed)
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build Docker image for portfolio-site
-        # Мы только собираем образ, пока не пушим его.
-        run: docker compose build portfolio-site
-
-  test-image: # Отдельный job для теста
-    runs-on: ubuntu-latest
-    needs: build-image
-    env:
-      TEST_IMAGE_NAME: ${{ needs.build.outputs.image_name }} 
 
     steps:
-    - name: Log in to Docker Hub (for pulling the freshly built image if needed, though not strictly required after `build`)
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Docker Buildx and Compose
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build Docker image
+      run: docker-compose build portfolio-site
 
+    # --- Минималистичный Health Check на запуск контейнера после сборки ---
     - name: Run simple container launch check
       run: |
         set -e
-        echo "Running temporary container for simple launch check using image: $TEST_IMAGE_NAME"
+        echo "Running simple container launch check..."
         
-        # Запускаем контейнер в фоновом режиме.
-        docker run -d --name portfolio-site-test -p 8080:80 "$TEST_IMAGE_NAME" || { echo "ERROR: Could not start portfolio-site-test container!"; exit 1; }
+        docker run -d --name portfolio-site-test -p 8080:80 zhenyapetko/portfolio-site:latest || { echo "ERROR: Could not start portfolio-site-test container!"; exit 1; }
         
-        sleep 5 # Даем контейнеру немного времени на запуск.
+        sleep 5 # Даем контейнеру время на запуск
         
-        echo "Checking container status..."
-        
+        # Проверяем, что контейнер находится в состоянии "running"
         CONTAINER_STATUS=$(docker inspect portfolio-site-test --format='{{.State.Status}}')
         
         if [ "$CONTAINER_STATUS" == "running" ]; then
-            echo "Simple launch check passed: Container 'portfolio-site-test' is running."
+            echo "Container 'portfolio-site-test' is running. Test passed."
         else
-            echo "Error: Simple launch check failed. Container 'portfolio-site-test' is not running."
-            echo "Current status: $CONTAINER_STATUS"
-            docker logs portfolio-site-test # Выводим логи для отладки
+            echo "Error: Container 'portfolio-site-test' is not running. Status: $CONTAINER_STATUS"
+            docker logs portfolio-site-test # Показываем логи для отладки
             exit 1
         fi
         
-        echo "Cleaning up test container..."
-        docker rm -f portfolio-site-test || true # Удаляем контейнер после теста
+        docker rm -f portfolio-site-test || true # Удаляем временный контейнер
 
+    - name: Push Docker image to Docker Hub
+      run: docker-compose push portfolio-site
 
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-  # Job 3: Пушит кастомный образ portfolio-site в Docker Hub (только после успешного теста)
-  push-image:
-    runs-on: ubuntu-latest
-    needs: test-image # Зависит от успешного теста
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Deploy to Server via SSH
+      env:
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+        DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+        DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        GIT_REPO_SSH_URL: "git@github.com:zhenyapetko/portfolio-site.git"
+        DOCKER_IMAGE_NAME: "zhenyapetko/portfolio-site:latest"
+        DEPLOY_PATH: "/opt/portfolio-site"
 
-      - name: Set up Docker Buildx and Compose v2
-        uses: docker/setup-buildx-action@v2
+      run: |
+        set -e
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          
-      - name: Push Docker image for portfolio-site
-        run: docker compose push portfolio-site
+        echo "Connecting to ${SSH_USERNAME}@${SSH_HOST}"
 
-  # Job 4: Разворачивает приложение на EC2 (только после успешного пуша)
-  deploy:
-    runs-on: ubuntu-latest
-    needs: push-image # Зависит от успешного пуша образа
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up SSH key for EC2 access
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Deploy to Server via SSH
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
-          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          DEPLOY_PATH: "/opt/portfolio-site" 
-
-        run: |
+        ssh -o StrictHostKeyChecking=no \
+            -o SendEnv=DOCKER_USER,DOCKER_PASSWORD,GIT_REPO_SSH_URL,DOCKER_IMAGE_NAME,DEPLOY_PATH,DOMAIN_NAME \
+            ${SSH_USERNAME}@${SSH_HOST} << EOF_SSH_SCRIPT
           set -e
 
-          echo "Connecting to ${SSH_USERNAME}@${SSH_HOST}"
+          echo "--- Выполнение скрипта деплоя на удаленном сервере ---"
+          
+          if [ ! -d "${DEPLOY_PATH}/.git" ]; then
+            echo "Repository not found at ${DEPLOY_PATH}, cloning it..."
+            mkdir -p "${DEPLOY_PATH}" || { echo "ERROR: Failed to create directory ${DEPLOY_PATH}"; exit 1; }
+            git clone "${GIT_REPO_SSH_URL}" "${DEPLOY_PATH}" || { echo "ERROR: Failed to clone repository ${GIT_REPO_SSH_URL}"; exit 1; }
+          fi
+          
+          echo "Entering project directory: ${DEPLOY_PATH}"
+          cd "${DEPLOY_PATH}" || { echo "ERROR: Failed to change directory to ${DEPLOY_PATH}"; exit 1; }
 
-          ssh -o StrictHostKeyChecking=no \
-              -o SendEnv=DOCKER_USER,DOCKER_PASSWORD,DEPLOY_PATH,DOMAIN_NAME \
-              ${SSH_USERNAME}@${SSH_HOST} << 'EOF_SSH_SCRIPT'
-            set -e
-            
-            echo "--- Executing deployment script on remote server ---"
-            
-            if [ ! -d "${DEPLOY_PATH}/.git" ]; then
-              echo "Repository not found at ${DEPLOY_PATH}, cloning it for configs..."
-              mkdir -p "${DEPLOY_PATH}" || { echo "ERROR: Failed to create directory ${DEPLOY_PATH}"; exit 1; }
-              git clone "https://github.com/zhenyapetko/portfolio-site.git" "${DEPLOY_PATH}" || { echo "ERROR: Failed to clone repository for configs!"; exit 1; }
-            fi
-            
-            echo "Entering project directory: ${DEPLOY_PATH}"
-            cd "${DEPLOY_PATH}" || { echo "ERROR: Failed to change directory to ${DEPLOY_PATH}"; exit 1; }
+          echo "Pulling latest git changes for configuration files..."
+          git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
 
-            echo "Pulling latest git changes for configuration files (docker-compose.yml etc.)..."
-            git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
+          echo "Performing Docker system cleanup..."
+          docker system prune -af
+          docker volume prune -f
+          
+          echo "Stopping existing services..."
+          docker compose down --remove-orphans || true 
 
-            echo "Performing Docker system cleanup..."
-            docker system prune -af 
-            docker volume prune -f  
-            
-            echo "Stopping existing services..."
-            docker compose down --remove-orphans || true 
+          echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
 
-            echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
-            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
+          echo "Pulling latest Docker image from Docker Hub, image: ${DOCKER_IMAGE_NAME}..."
+          docker pull "${DOCKER_IMAGE_NAME}" || { echo "ERROR: Failed to pull latest image from Docker Hub!"; exit 1; }
+          
+          echo "Starting services..."
+          docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
+          
+          echo "--- Docker Compose services started. ---"
+          
+          echo "Deployment process finished."
+        EOF_SSH_SCRIPT
 
-            echo "Pulling all latest Docker images for services..."
-            docker compose pull || { echo "ERROR: Failed to pull latest images with docker compose!"; exit 1; }
-            
-            echo "Starting services..."
-            docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
-            
-            echo "Deployment successful."
-          EOF_SSH_SCRIPT
-
-      - name: Send Telegram Notification (Success)
-        if: success()
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TG_CHAT_ID }}
-          token: ${{ secrets.TG_BOT_TOKEN }}
-          format: markdown
-          message: |
-            ✅ *Деплой успешен!*
-            
-            [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
-            [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-      
-      - name: Send Telegram Notification (Failure)
-        if: failure()
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TG_CHAT_ID }}
-          token: ${{ secrets.TG_BOT_TOKEN }}
-          format: markdown
-          message: |
-            ❌ *Деплой провален!*
-            
-            [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    - name: Send Telegram Notification (Success)
+      if: success()
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TG_CHAT_ID }}
+        token: ${{ secrets.TG_BOT_TOKEN }}
+        format: markdown
+        message: |
+          ✅ *Деплой успешен!*
+          
+          [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
+          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    
+    - name: Send Telegram Notification (Failure)
+      if: failure()
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TG_CHAT_ID }}
+        token: ${{ secrets.TG_BOT_TOKEN }}
+        format: markdown
+        message: |
+          ❌ *Деплой провален!*
+          
+          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
