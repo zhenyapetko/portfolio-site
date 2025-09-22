@@ -1,173 +1,180 @@
-name: CI/CD Pipeline to EC2 With Image Push
+name: CI/CD Pipeline to EC2 With Full Docker Compose Build/Push
 
 on:
   push:
     branches: [main]
 
 jobs:
+  # Job 1: Собирает только кастомный образ portfolio-site
+  build-image:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx and Compose v2
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub (for potentially pulling base images if needed)
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image for portfolio-site
+        # Мы только собираем образ, пока не пушим его.
+        run: docker compose build portfolio-site
+
+  # Job 2: Тестирует только что собранный образ portfolio-site
+  test-image:
+    runs-on: ubuntu-latest
+    needs: build-image # Зависит от успешной сборки образа
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx and Compose v2
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Log in to Docker Hub (for potentially pulling base images if needed)
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Run portfolio-site container for testing
+        # Запускаем только тестируемый сервис в фоне.
+        # Это потребует, чтобы все зависимости этого сервиса были либо уже в образе,
+        # либо чтобы они были запущены как часть этого же тестового compose file.
+        # Для простоты, запускаем только portfolio-site.
+        run: |
+          docker compose up -d portfolio-site
+          # Даем контейнеру немного времени на запуск
+          sleep 10s 
+
+      - name: Test portfolio-site HTTP response
+        # Простая проверка доступности по HTTP
+        run: |
+          # В зависимости от того, как ты настроил порты в docker-compose.yml для тестирования.
+          # Если порт 8080 для портфолио, то:
+          curl -v --fail http://localhost:8080/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
+          # Если порт 80:
+          # curl -v --fail http://localhost/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
+
+      - name: Stop and remove test container
+        if: always() # Выполнить даже если тесты упали, чтобы очистить ресурсы
+        run: docker compose down
+
+  # Job 3: Пушит кастомный образ portfolio-site в Docker Hub (только после успешного теста)
+  push-image:
+    runs-on: ubuntu-latest
+    needs: test-image # Зависит от успешного теста
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx and Compose v2
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: Push Docker image for portfolio-site
+        run: docker compose push portfolio-site
+
+  # Job 4: Разворачивает приложение на EC2 (только после успешного пуша)
   deploy:
     runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    # Шаг 1: Установка Docker Buildx и Docker Compose
-    # Это гарантирует, что docker-compose будет доступен на раннере
-    - name: Set up Docker Buildx and Compose
-      uses: docker/setup-buildx-action@v2
-
-    # Шаг 2: Войти в Docker Hub на GitHub Actions раннере для сборки и пуша
-    - name: Log in to Docker Hub (GitHub Actions Runner)
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    # Шаг 3: Собрать Docker-образ вашего приложения на GitHub Actions раннере
-    # Будет собран образ 'zhenyapetko/portfolio-site:latest'
-    - name: Build Docker image (on GitHub Actions Runner)
-      run: docker-compose build portfolio-site # Собираем только portfolio-site сервис из docker-compose.yml
-
-    # Шаг 4: Пуш собранного образа в Docker Hub
-    - name: Push Docker image to Docker Hub
-      run: docker-compose push portfolio-site # Пушим только portfolio-site
-
-    # --- Шаг 5: Настройка SSH-соединения для деплоя на EC2 ---
-    - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-        # Добавляем ключ в ssh-agent, чтобы git clone мог им воспользоваться
-
-    # --- Шаг 6: Основной скрипт деплоя на EC2 по SSH ---
-    - name: Deploy to Server via SSH
-      env:
-        SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-        DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }} # Переменная для Health Check
-        DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        GIT_REPO_SSH_URL: "git@github.com:zhenyapetko/portfolio-site.git" # SSH-ссылка для клонирования репозитория
-        DOCKER_IMAGE_NAME: "zhenyapetko/portfolio-site:latest" # Полное имя образа для pull на EC2
-        DEPLOY_PATH: "/opt/portfolio-site" # Путь, куда будет клонирован/обновлен репозиторий на EC2
-
-      run: |
-        set -e # Выйти немедленно, если любая команда завершится неудачей
-
-        echo "Connecting to ${SSH_USERNAME}@${SSH_HOST}"
-
-        # Для передачи переменных окружения в SSH-сессию используем -o SendEnv
-        # и раскрываем переменные локально до отправки всего скрипта.
-        # Поэтому внутри EOF_SSH_SCRIPT не нужно экранировать $
-        ssh -o StrictHostKeyChecking=no \
-            -o SendEnv=DOCKER_USER,DOCKER_PASSWORD,GIT_REPO_SSH_URL,DOCKER_IMAGE_NAME,DEPLOY_PATH,DOMAIN_NAME \
-            ${SSH_USERNAME}@${SSH_HOST} << EOF_SSH_SCRIPT
-          set -e # Обязательно повторяем set -e внутри скрипта на сервере
-          
-          # Переменные теперь доступны как обычные переменные окружения на удаленном хосте
-          # (DOCKER_USER, DOCKER_PASSWORD, GIT_REPO_SSH_URL, DOCKER_IMAGE_NAME, DEPLOY_PATH, DOMAIN_NAME)
-
-          echo "--- Выполнение скрипта деплоя на удаленном сервере ---"
-          
-          # --- Подготовка репозитория на EC2 (клонирование или обновление) ---
-          if [ ! -d "${DEPLOY_PATH}/.git" ]; then
-            echo "Repository not found at ${DEPLOY_PATH}, cloning it..."
-            mkdir -p "${DEPLOY_PATH}" || { echo "ERROR: Failed to create directory ${DEPLOY_PATH}"; exit 1; }
-            # Используем GIT_REPO_SSH_URL здесь для клонирования
-            git clone "${GIT_REPO_SSH_URL}" "${DEPLOY_PATH}" || { echo "ERROR: Failed to clone repository ${GIT_REPO_SSH_URL}"; exit 1; }
-          fi
-          
-          echo "Entering project directory: ${DEPLOY_PATH}"
-          cd "${DEPLOY_PATH}" || { echo "ERROR: Failed to change directory to ${DEPLOY_PATH}"; exit 1; }
-
-          # Pull конфиги: docker-compose.yml, prometheus.yml, nginx/site.conf и т.д.
-          echo "Pulling latest git changes for configuration files..."
-          git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
-
-          # --- Очистка Docker на EC2 ---
-          echo "Performing Docker system cleanup..."
-          docker system prune -af # Удаляет все неиспользуемые контейнеры, образы, сети, кэш
-          docker volume prune -f  # Удаляет все неиспользуемые тома
-          
-          # --- Docker Compose действия на EC2 ---
-          echo "Stopping existing services..."
-          # --remove-orphans удаляет контейнеры, которые больше не определены в актуальном docker-compose.yml
-          docker compose down --remove-orphans || true 
-
-          echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
-          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
-
-          echo "Pulling latest Docker image from Docker Hub, image: ${DOCKER_IMAGE_NAME}..."
-          docker pull "${DOCKER_IMAGE_NAME}" || { echo "ERROR: Failed to pull latest image from Docker Hub!"; exit 1; }
-          
-          echo "Starting services..."
-          # --force-recreate принудительно пересоздает контейнеры.
-          # Если certbot использует тома для сертификатов, "--volumes --remove-orphans" может быть опасно, 
-          # поэтому используем только "down --remove-orphans" и "up"
-          docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
-          
-          echo "--- Docker Compose services started. Performing health check... ---"
-          
-          # --- БЛОК ТЕСТИРОВАНИЯ (Health Check) ---
-          echo "Running post-deployment health check on ${DOMAIN_NAME}..."
-          
-          ATTEMPTS=20 # Количество попыток проверки
-          DELAY=5     # Задержка между попытками в секундах
-          
-          TARGET_URL="https://${DOMAIN_NAME}" # Проверяем HTTPS на доменном имени
-          
-          echo "Checking health on ${TARGET_URL}"
-
-          for i in $(seq 1 ${ATTEMPTS}); do 
-              # -s (silent) - тихий режим, -L (Location) - следовать редиректам
-              # -o /dev/null - отбрасывает тело ответа, -w "%{http_code}" - выводит только HTTP-код
-              HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "${TARGET_URL}") 
-              echo "$(date +'%H:%M:%S') - Attempt ${i}/${ATTEMPTS}: Received HTTP code ${HTTP_CODE} from ${TARGET_URL}"
-              
-              if [ "${HTTP_CODE}" -eq 200 ] || [ "${HTTP_CODE}" -eq 301 ] || [ "${HTTP_CODE}" -eq 302 ]; then
-                  echo "Test passed: Site is accessible (HTTP ${HTTP_CODE} OK)."
-                  break
-              fi
-              
-              echo "Retrying in ${DELAY} seconds..."
-              sleep "${DELAY}"
-              
-              if [ "${i}" -eq "${ATTEMPTS}" ]; then
-                  echo "Error: Site did not return 2xx/3xx OK for ${TARGET_URL} after ${ATTEMPTS} attempts. Last HTTP code: ${HTTP_CODE}"
-                  docker ps -a # Выведем статус всех контейнеров для отладки
-                  exit 1
-              fi
-          done
-          
-          echo "Deployment successful."
-        EOF_SSH_SCRIPT
-
-    # --- Шаг 7: Отправка уведомления в Telegram при успешном деплое ---
-    - name: Send Telegram Notification (Success)
-      if: success()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TG_CHAT_ID }}
-        token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown
-        message: |
-          ✅ *Деплой успешен!*
-          
-          [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
-          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    needs: push-image # Зависит от успешного пуша образа
     
-    # --- Шаг 8: Отправка уведомления в Telegram при неудачном деплое ---
-    - name: Send Telegram Notification (Failure)
-      if: failure()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TG_CHAT_ID }}
-        token: ${{ secrets.TG_BOT_TOKEN }}
-        format: markdown
-        message: |
-          ❌ *Деплой провален!*
-          
-          [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key for EC2 access
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Server via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DEPLOY_PATH: "/opt/portfolio-site" 
+
+        run: |
+          set -e
+
+          echo "Connecting to ${SSH_USERNAME}@${SSH_HOST}"
+
+          ssh -o StrictHostKeyChecking=no \
+              -o SendEnv=DOCKER_USER,DOCKER_PASSWORD,DEPLOY_PATH,DOMAIN_NAME \
+              ${SSH_USERNAME}@${SSH_HOST} << 'EOF_SSH_SCRIPT'
+            set -e
+            
+            echo "--- Executing deployment script on remote server ---"
+            
+            if [ ! -d "${DEPLOY_PATH}/.git" ]; then
+              echo "Repository not found at ${DEPLOY_PATH}, cloning it for configs..."
+              mkdir -p "${DEPLOY_PATH}" || { echo "ERROR: Failed to create directory ${DEPLOY_PATH}"; exit 1; }
+              git clone "https://github.com/zhenyapetko/portfolio-site.git" "${DEPLOY_PATH}" || { echo "ERROR: Failed to clone repository for configs!"; exit 1; }
+            fi
+            
+            echo "Entering project directory: ${DEPLOY_PATH}"
+            cd "${DEPLOY_PATH}" || { echo "ERROR: Failed to change directory to ${DEPLOY_PATH}"; exit 1; }
+
+            echo "Pulling latest git changes for configuration files (docker-compose.yml etc.)..."
+            git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
+
+            echo "Performing Docker system cleanup..."
+            docker system prune -af 
+            docker volume prune -f  
+            
+            echo "Stopping existing services..."
+            docker compose down --remove-orphans || true 
+
+            echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
+
+            echo "Pulling all latest Docker images for services..."
+            docker compose pull || { echo "ERROR: Failed to pull latest images with docker compose!"; exit 1; }
+            
+            echo "Starting services..."
+            docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
+            
+            echo "Deployment successful."
+          EOF_SSH_SCRIPT
+
+      - name: Send Telegram Notification (Success)
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ✅ *Деплой успешен!*
+            
+            [Перейти на сайт](http://${{ secrets.DOMAIN_NAME }})
+            [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+      
+      - name: Send Telegram Notification (Failure)
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ❌ *Деплой провален!*
+            
+            [Посмотреть логи](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
