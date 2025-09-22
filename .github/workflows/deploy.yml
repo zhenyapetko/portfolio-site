@@ -24,7 +24,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     
     - name: Build Docker image
-      run: docker сompose build portfolio-site
+      run: docker compose build portfolio-site
 
     # --- Минималистичный Health Check на запуск контейнера после сборки ---
     - name: Run simple container launch check
