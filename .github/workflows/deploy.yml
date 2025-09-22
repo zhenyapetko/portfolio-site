@@ -50,7 +50,7 @@ jobs:
         docker rm -f portfolio-site-test || true # Удаляем временный контейнер
 
     - name: Push Docker image to Docker Hub
-      run: docker-compose push portfolio-site
+      run: docker compose push portfolio-site
 
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.5.3
