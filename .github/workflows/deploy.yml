@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  deploy: # Одно Job, но с логичным порядком шагов
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,15 +26,17 @@ jobs:
     - name: Build Docker image
       run: docker compose build portfolio-site
 
-      
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
     - name: Verify Docker image was built
       run: |
         set -e
         IMAGE_NAME="zhenyapetko/portfolio-site:latest"
         echo "Verifying that image '$IMAGE_NAME' was built successfully..."
         
-        # Проверяем, существует ли образ с таким именем
-        # docker image inspect вернет 0, если образ найден, и не 0, если нет.
         docker image inspect "$IMAGE_NAME" > /dev/null 2>&1
         
         if [ $? -eq 0 ]; then
@@ -44,7 +46,11 @@ jobs:
             exit 1
         fi
 
-
+  push:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
     - name: Push Docker image to Docker Hub
       run: docker compose push portfolio-site
 
@@ -52,7 +58,13 @@ jobs:
       uses: webfactory/ssh-agent@v0.5.3
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
+  
+  
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push
+    
+    steps:
     - name: Deploy to Server via SSH
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
