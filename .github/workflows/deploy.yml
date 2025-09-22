@@ -52,6 +52,7 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       # Шаг 2: Основной скрипт деплоя на EC2 по SSH
+      # Шаг 2: Основной скрипт деплоя на EC2 по SSH
       - name: Deploy to Server via SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -68,88 +69,87 @@ jobs:
 
           # Использование `ssh -T` для выполнения нескольких команд на удаленном сервере.
           # `StrictHostKeyChecking=no` следует использовать с осторожностью. В продакшене лучше заранее добавить fingerprint.
-          ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} << 'EOF_SSH_SCRIPT'
-            set -e # Обязательно повторяем set -e внутри скрипта на сервере
+          # ВАЖНО: Передаем переменные окружения явно в SSH-сессию
+          ssh -o StrictHostKeyChecking=no ${{ env.SSH_USERNAME }}@${{ env.SSH_HOST }} "
+            # Заново устанавливаем set -e для надежности внутри удаленной сессии
+            set -e 
+
+            # Явно экспортируем переменные окружения для использования внутри удаленного скрипта
+            export DOCKER_USER='${{ env.DOCKER_USER }}'
+            export DOCKER_PASSWORD='${{ env.DOCKER_PASSWORD }}'
+            export REPO_REMOTE_URL='${{ env.REPO_REMOTE_URL }}'
+            export IMAGE_NAME='${{ env.IMAGE_NAME }}'
+
+            REPO_PATH=\"/opt/portfolio-site\" # Путь, где Docker Compose проект на сервере
             
-            REPO_PATH="/opt/portfolio-site" # Путь, где Docker Compose проект на сервере
-            
-            echo "--- Выполнение скрипта деплоя на удаленном сервере ---"
+            echo \"--- Выполнение скрипта деплоя на удаленном сервере ---\"
 
             # --- Обновление или клонирование репозитория ---
-            if [ -d "$REPO_PATH/.git" ]; then
-              echo "Repository already exists, pulling latest changes..."
-              cd "$REPO_PATH" || { echo "ERROR: Failed to change directory to $REPO_PATH"; exit 1; }
-              git pull origin main || { echo "ERROR: Failed to pull latest configuration changes"; exit 1; }
+            if [ -d \"$REPO_PATH/.git\" ]; then
+              echo \"Repository already exists, pulling latest changes...\"
+              cd \"$REPO_PATH\" || { echo \"ERROR: Failed to change directory to $REPO_PATH\"; exit 1; }
+              git pull origin main || { echo \"ERROR: Failed to pull latest configuration changes\"; exit 1; }
             else
-              echo "Repository not found at $REPO_PATH, cloning it..."
+              echo \"Repository not found at $REPO_PATH, cloning it...\"
               # Создаем директорию, если она не существует
-              mkdir -p "$REPO_PATH" 
-              git clone "$REPO_REMOTE_URL" "$REPO_PATH" || { echo "ERROR: Failed to clone repository"; exit 1; }
-              cd "$REPO_PATH" || { echo "ERROR: Failed to change directory to $REPO_PATH after clone"; exit 1; }
+              mkdir -p \"$REPO_PATH\" 
+              git clone \"$REPO_REMOTE_URL\" \"$REPO_PATH\" || { echo \"ERROR: Failed to clone repository\"; exit 1; }
+              cd \"$REPO_PATH\" || { echo \"ERROR: Failed to change directory to $REPO_PATH after clone\"; exit 1; }
             fi
 
             # --- Очистка Docker ---
-            echo "Performing Docker system cleanup..."
+            echo \"Performing Docker system cleanup...\"
             docker system prune -af # clean all unused (containers, images, networks) forcefully
             docker volume prune -f  # clean all unused volumes forcefully
 
             # --- Вход в Docker Hub на EC2 (для pull приватных образов) ---
-            echo "Logging into Docker Hub on EC2..."
-            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin || { echo "ERROR: Failed to login to Docker Hub on EC2!"; exit 1; }
+            echo \"Logging into Docker Hub on EC2, username: ${DOCKER_USER}...\"
+            # Используем переданный DOCKER_PASSWORD для входа
+            echo \"${DOCKER_PASSWORD}\" | docker login --username \"${DOCKER_USER}\" --password-stdin || { echo \"ERROR: Failed to login to Docker Hub on EC2!\"; exit 1; }
 
             # --- Docker Compose действия на EC2 ---
-            echo "Stopping existing services..."
-            # Используем `docker compose` (с пробелом) вместо `docker-compose` (с дефисом)
-            # `--remove-orphans` удалит контейнеры, которых нет в текущем docker-compose.yml
-            # `|| true` позволяет не прерывать скрипт, если контейнеров еще нет
+            echo \"Stopping existing services...\"
             docker compose down --remove-orphans || true 
 
-            echo "Pulling latest Docker image (${IMAGE_NAME})..."
-            # Вместо `docker compose pull` явно тянем только наш образ Hugo/Nginx
-            # Это гарантирует, что мы получим именно тот образ, который только что запушили
-            docker pull "${IMAGE_NAME}" || { echo "ERROR: Failed to pull latest image from Docker Hub!"; exit 1; }
+            echo \"Pulling latest Docker image (${IMAGE_NAME})...\"
+            docker pull \"${IMAGE_NAME}\" || { echo \"ERROR: Failed to pull latest image from Docker Hub!\"; exit 1; }
 
-            echo "Starting services..."
-            # `--force-recreate` принудительно пересоздаст контейнеры (нужно для нового образа)
-            # `--build` здесь НЕ нужен, так как образ уже собран и спулен
-            # `--remove-orphans` повторно на случай, если что-то появилось
-            docker compose up -d --force-recreate --remove-orphans || { echo "ERROR: Failed to start Docker Compose services!"; exit 1; }
+            echo \"Starting services...\"
+            docker compose up -d --force-recreate --remove-orphans || { echo \"ERROR: Failed to start Docker Compose services!\"; exit 1; }
             
-            echo "--- Docker Compose services started. Performing health check... ---"
+            echo \"--- Docker Compose services started. Performing health check... ---\"
             
             # --- БЛОК ТЕСТИРОВАНИЯ ---
-            ATTEMPTS=20 # Количество попыток
-            DELAY=5     # Задержка между попытками в секундах
+            ATTEMPTS=20 
+            DELAY=5     
             
-            # Предполагаем, что Nginx на EC2 слушает на 80 порту хоста,
-            # и этот порт доступен локально через 127.0.0.1
-            TARGET_URL="http://127.0.0.1" 
+            TARGET_URL=\"http://127.0.0.1\" 
 
-            for i in $(seq 1 "$ATTEMPTS"); do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL" || echo "000") # curl может упасть
+            for i in \$(seq 1 \"\$ATTEMPTS\"); do
+                HTTP_CODE=\$(curl -s -o /dev/null -w \"%\{http_code\}\" \"\$TARGET_URL\" || echo \"000\")
                 
-                echo "$(date '+%H:%M:%S') - Attempt $i/$ATTEMPTS: Received HTTP code $HTTP_CODE from $TARGET_URL"
+                echo \"\$(date '+%H:%M:%S') - Attempt \$i/\$ATTEMPTS: Received HTTP code \$HTTP_CODE from \$TARGET_URL\"
                 
-                if [ "$HTTP_CODE" -eq 200 ]; then
-                    echo "SUCCESS: Nginx is serving the site (HTTP 200 OK)."
+                if [ \$HTTP_CODE -eq 200 ]; then
+                    echo \"SUCCESS: Nginx is serving the site (HTTP 200 OK).\"
                     break
                 fi
                 
-                if [ "$i" -eq "$ATTEMPTS" ]; then
-                    echo "ERROR: Nginx did not return 200 OK for $TARGET_URL after $ATTEMPTS attempts. Last HTTP code: $HTTP_CODE"
-                    echo "Checking container status:"
+                if [ \$i -eq \"\$ATTEMPTS\" ]; then
+                    echo \"ERROR: Nginx did not return 200 OK for \$TARGET_URL after \$ATTEMPTS attempts. Last HTTP code: \$HTTP_CODE\"
+                    echo \"Checking container status:\"
                     docker ps -a
                     docker logs portfolio-site-portfolio-site-1 # Просмотрите логи вашего основного контейнера Nginx
                     exit 1
                 fi
                 
-                echo "Retrying in $DELAY seconds..."
-                sleep "$DELAY"
+                echo \"Retrying in \$DELAY seconds...\"
+                sleep \"\$DELAY\"
             done
             
-            echo "--- Деплой на EC2 успешно завершен! ---"
-          EOF_SSH_SCRIPT
-
+            echo \"--- Деплой на EC2 успешно завершен! ---\"
+          " # Закрытие SSH-сессии
+          
     # --- Telegram-уведомления ---
       - name: Send Telegram Notification (Success)
         if: success()
