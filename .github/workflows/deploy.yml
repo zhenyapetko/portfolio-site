@@ -59,7 +59,7 @@ jobs:
         run: |
           # В зависимости от того, как ты настроил порты в docker-compose.yml для тестирования.
           # Если порт 8080 для портфолио, то:
-          curl -v --fail http://localhost:8080/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
+          curl -v --fail http://localhost:443/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
           # Если порт 80:
           # curl -v --fail http://localhost/ || { echo "Health check failed!"; docker logs portfolio-site; exit 1; }
 
