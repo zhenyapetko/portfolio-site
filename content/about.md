@@ -19,12 +19,8 @@ type: page
 
 ## Технический стек
 - **Frontend/Static:** Hugo
-- **Контейнеризация:** Docker
-- **IaC:** Terraform
+- **Контейнеризация:** Docker, Docker Compose
+- **IaC:** Terraform, Ansible
 - **CI/CD:** GitHub Actions
 - **Мониторинг:** Prometheus + Grafana
-- **Облако:** AWS EC2
-
-## Будущие планы
-- Добавить monitoring метрик реального времени.
-- Интегрировать Kubernetes.
+- **Облако:** AWS EC2 + ELastic IP
