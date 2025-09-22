@@ -93,7 +93,7 @@ jobs:
           docker compose down --remove-orphans 
 
           echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
-          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin }
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin
 
           
           docker pull "${DOCKER_IMAGE_NAME}"
