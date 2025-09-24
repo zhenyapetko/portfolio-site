@@ -52,6 +52,8 @@ services:
       - grafana_data:/var/lib/grafana  # Persist dashboards
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin  # Измени password!
+      - GF_SERVER_DOMAIN=grafana.e-petko.dev  # ✅ ПОДДОМЕН
+      - GF_SERVER_ROOT_URL=https://grafana.e-petko.dev/  # ✅ ПОДДОМЕН
     depends_on:
       - prometheus
     networks:
