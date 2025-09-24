@@ -45,7 +45,7 @@ jobs:
 
 
     - name: Push Docker image to Docker Hub
-      run: docker compose push portfolio-site
+      run: docker compose push website
 
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.5.3
