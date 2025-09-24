@@ -24,7 +24,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     
     - name: Build Docker image
-      run: docker compose build portfolio-site
+      run: docker compose build website
 
       
     - name: Verify Docker image was built
