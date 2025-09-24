@@ -10,6 +10,9 @@
     nginx_conf_src: "{{ project_root }}/nginx/nginx.conf" # Путь к nginx.conf в репозитории, если он там
     nginx_conf_dest: "{{ project_root }}/nginx.conf" # Место куда Nginx ожидает конфиг внутри/рядом с compose
 
+    monitoring_services: ["prometheus", "grafana", "node-exporter", "certbot"]
+    monitoring_dir: "{{ project_root }}/monitoring"
+
   tasks:
     - name: Update apt cache
       apt:
@@ -58,11 +61,80 @@
         accept_hostkey: yes # Принимает ключ хоста GitHub автоматически
       become_user: ubuntu # Клонируем от имени пользователя ubuntu
 
+    - name: Create monitoring directory for Prometheus config
+      file:
+        path: "{{ monitoring_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+      when: monitoring_services | length > 0
 
-    - name: Run docker-compose build and up
-      # 'docker compose' (с пробелом) для V2
-      community.docker.docker_compose: # Используем специализированный модуль ansible для docker compose
-        project_src: "{{ project_root }}" # root directory of the compose project
-        state: present # Заменит 'up -d' в данном случае
-        build: yes # Собираем образы из Dockerfile, если они есть
-        remove_volumes: no # Не удалять тома при перезапуске (важно для Let's Encrypt)
+    - name: Copy Prometheus configuration if exists
+      copy:
+        src: "{{ project_root }}/monitoring/prometheus.yml"
+        dest: "{{ monitoring_dir }}/prometheus.yml"
+        remote_src: yes # Копируем с удаленного сервера (из репозитория)
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+      when: 
+        - "'prometheus' in monitoring_services"
+        - monitoring_services | length > 0
+      ignore_errors: yes # Пропустить если файла нет
+
+    - name: Pull images for monitoring services
+      community.docker.docker_compose:
+        project_src: "{{ project_root }}"
+        services: "{{ monitoring_services }}"
+        pull: yes
+        state: present
+      when: monitoring_services | length > 0
+
+    - name: Start monitoring services
+      community.docker.docker_compose:
+        project_src: "{{ project_root }}"
+        services: "{{ monitoring_services }}"
+        state: present
+        stopped: no
+        restarted: no
+        recreate: yes
+      when: monitoring_services | length > 0
+      register: monitoring_start_result
+
+    - name: Show monitoring services deployment result
+      debug:
+        var: monitoring_start_result
+      when: monitoring_services | length > 0
+
+    - name: Verify monitoring services are running
+      community.docker.docker_compose:
+        project_src: "{{ project_root }}"
+        services: "{{ monitoring_services }}"
+        state: present
+      when: monitoring_services | length > 0
+      register: monitoring_services_status
+
+    - name: Display monitoring services status
+      debug:
+        msg: "Monitoring service {{ item.service }} is {{ item.state }}"
+      loop: "{{ monitoring_services_status.services }}"
+      when: monitoring_services | length > 0
+
+    - name: Run docker-compose build and up for main application
+      community.docker.docker_compose:
+        project_src: "{{ project_root }}"
+        state: present
+        build: yes
+        remove_volumes: no
+
+    - name: Check all running services
+      command: docker-compose ps
+      args:
+        chdir: "{{ project_root }}"
+      register: all_services_status
+      changed_when: false
+
+    - name: Display all running services
+      debug:
+        var: all_services_status.stdout_lines
