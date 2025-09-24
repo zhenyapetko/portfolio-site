@@ -46,16 +46,14 @@ services:
       - monitoring
     restart: unless-stopped
 
-  grafana:  # Dashboard на базу Prometheus
+  grafana:
     image: grafana/grafana:latest
-    volumes:
-      - grafana_data:/var/lib/grafana  # Persist dashboards
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin  # Измени password!
-      - GF_SERVER_DOMAIN=grafana.e-petko.dev  # ✅ ПОДДОМЕН
-      - GF_SERVER_ROOT_URL=https://grafana.e-petko.dev/  # ✅ ПОДДОМЕН
-    depends_on:
-      - prometheus
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_DOMAIN=grafana.e-petko.dev
+      - GF_SERVER_ROOT_URL=https://grafana.e-petko.dev/
+    volumes:
+      - grafana_data:/var/lib/grafana
     networks:
       - monitoring
     restart: unless-stopped
