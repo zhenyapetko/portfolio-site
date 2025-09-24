@@ -35,7 +35,9 @@ services:
     restart: unless-stopped
 
   prometheus:  
-    image: prom/prometheus:latest  
+    image: prom/prometheus:latest
+    ports:
+      - "9000:9000" 
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml  # Конфиг (создай файлы)
       - prometheus_data:/prometheus  # Persist data
@@ -48,6 +50,8 @@ services:
 
   grafana:  # Dashboard на базу Prometheus
     image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana  # Persist dashboards
     environment:
