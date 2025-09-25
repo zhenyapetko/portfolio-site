@@ -8,6 +8,10 @@ type: page
 
 <p>Здесь будут live-метрики инфраструктуры из Prometheus/Grafana.</p>
 
+**Prometehus:** [Prometheus](https://prometheus.e-petko.dev/targets)
+
+**Grafana:** [Grafana](https://grafana.e-petko.dev/dashboards)
+
 ### Текущие метрики:
 - Успешные деплои: 95%
 - Время загрузки сайта: <1 сек
