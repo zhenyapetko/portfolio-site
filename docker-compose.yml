@@ -89,6 +89,12 @@ services:
       - monitoring
     restart: unless-stopped
 
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    networks:
+      - monitoring
+    restart: unless-stopped
+
 volumes:
   prometheus_data:
   grafana_data:
