@@ -10,6 +10,7 @@ favicon = "favicon.ico"
   Email = "zheny.petko@gmail.com"  # Замени на свой email
   GitHub = "https://github.com/zhenyapetko"  # Замени на свой профиль
   footerText = "© 2025 | Строим надёжные системы"
+  defaultTheme = "light"
 
 # Настройки для темы
 [[menu.main]]
