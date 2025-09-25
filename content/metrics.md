@@ -8,4 +8,7 @@ type: page
 **Grafana:** [Grafana](https://grafana.e-petko.dev/dashboards)
 
 ![Мониторинг ноды](/metric-diag.png)
+
+
+
 ![Мониторинг website](/metrics-site.png)
