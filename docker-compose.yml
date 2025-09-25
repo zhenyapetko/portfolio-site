@@ -30,21 +30,10 @@ services:
     volumes:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
-    command:
-      - sh
-      - -c
-      - |
-        sleep 30
-        certbot certonly --webroot -w /var/www/certbot \
-          -d e-petko.dev \
-          -d www.e-petko.dev \
-          -d grafana.e-petko.dev \
-          -d prometheus.e-petko.dev \
-          --email zhen.petko@gmail.com \
-          --agree-tos \
-          --non-interactive \
-          --keep-until-expiring \
-          --expand
+    command: [
+      "sh", "-c",
+      "sleep 30 && certbot certonly --webroot -w /var/www/certbot -d e-petko.dev -d www.e-petko.dev -d grafana.e-petko.dev -d prometheus.e-petko.dev --email zhen.petko@gmail.com --agree-tos --non-interactive --keep-until-expiring --expand"
+    ]
     networks:
       - monitoring  
     restart: on-failure
