@@ -4,7 +4,7 @@ date: 2024-10-01T00:00:00+00:00
 type: page
 ---
 
-# Статистика Проекта
+# Мониторинг!
 
 <p>Здесь будут live-метрики инфраструктуры из Prometheus/Grafana.</p>
 
@@ -15,4 +15,5 @@ type: page
 
 
 
-![Диаграмма метрик](/metric-diag.png)
+![Мониторинг ноды](/metric-diag.png)
+![Мониторинг website](/metrics-site.png)
