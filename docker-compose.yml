@@ -31,6 +31,8 @@ services:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
     command: >
+      sh -c "
+      sleep 30 &&
       certbot certonly
       --webroot
       -w /var/www/certbot
@@ -42,7 +44,9 @@ services:
       --agree-tos
       --non-interactive
       --keep-until-expiring
-      --expand 
+      --expand
+      --staging
+      " 
     networks:
       - monitoring  
     restart: on-failure
