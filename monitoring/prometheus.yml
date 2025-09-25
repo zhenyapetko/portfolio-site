@@ -3,7 +3,7 @@ global:
 scrape_configs:
   - job_name: 'website'
     static_configs:
-      - targets: ['website:80']  # Metrics с сайта
+      - targets: ['website:8000']  # Metrics с сайта
   - job_name: 'node'
     static_configs:
       - targets: ['node-exporter:9100']  # Системные metrics
