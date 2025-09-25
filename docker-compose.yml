@@ -31,18 +31,19 @@ services:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
     command: >
-          certonly \
-            --webroot -w /var/www/certbot \
-            -d 'e-petko.dev' -d 'www.e-petko.dev' \
-            -d 'grafana.e-petko.dev' -d 'prometheus.e-petko.dev' \
-            --email 'zhen.petko@gmail.com' \
-            --agree-tos \
-            --non-interactive \
-            --keep-until-expiring \
-            --expand \
-            --staging \
-            && echo 'Certbot successful!' \
-            || (echo 'Certbot failed! Exiting.' && exit 1)
+          sh -c "
+          certbot certonly \
+          --webroot -w /var/www/certbot \
+          -d 'e-petko.dev' -d 'www.e-petko.dev' \
+          -d 'grafana.e-petko.dev' -d 'prometheus.e-petko.dev' \
+          --email 'zhen.petko@gmail.com' \
+          --agree-tos \
+          --non-interactive \
+          --keep-until-expiring \
+          --expand \
+          --staging
+          "
+
     networks:
       - monitoring  
     restart: on-failure
