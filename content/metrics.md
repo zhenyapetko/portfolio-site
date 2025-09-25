@@ -13,11 +13,6 @@ type: page
 **Grafana:** [Grafana](https://grafana.e-petko.dev/dashboards)
 
 
-![Grafana Dashboard](https://grafana.e-petko.dev/goto/cez5ufwtka1vka?orgId=1)
 
-### Текущие метрики:
-- Успешные деплои: 95%
-- Время загрузки сайта: <1 сек
-- Используемые ресурсы AWS: Free Tier
 
 <img src="static/metric-diag.png" alt="Диаграмма метрик" width="500">  <!-- Добавь свою диаграмму в static/metric-diag.webp -->
