@@ -45,7 +45,6 @@ services:
       --non-interactive
       --keep-until-expiring
       --expand
-      --staging
       " 
     networks:
       - monitoring  
