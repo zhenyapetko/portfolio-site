@@ -15,4 +15,4 @@ type: page
 
 
 
-<img src="/metric-diag.png" alt="Диаграмма метрик" width="500">  <!-- Добавь свою диаграмму в static/metric-diag.webp -->
+<img src="{{ "metric-diag.png" | absURL }}" alt="Диаграмма метрик" width="500">
