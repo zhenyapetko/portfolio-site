@@ -8,6 +8,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro  # Только чтение
       - certbot_certs:/etc/letsencrypt:ro  # Добавьте это!
+      - certbot_webroot:/var/www/certbot:ro
     depends_on:
       - website    
       - grafana    
