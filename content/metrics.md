@@ -11,4 +11,4 @@ type: page
 
 
 
-![Мониторинг website](/metrics-site.png)
+[!Мониторинг website](/metrics-site.png)
