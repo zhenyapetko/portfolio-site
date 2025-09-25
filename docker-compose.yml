@@ -42,8 +42,7 @@ services:
       --agree-tos
       --non-interactive
       --keep-until-expiring
-      --expand
-      --staging  
+      --expand 
     networks:
       - monitoring  
     restart: on-failure
