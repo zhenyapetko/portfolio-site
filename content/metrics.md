@@ -7,8 +7,9 @@ type: page
 **Prometehus:** [Prometheus](https://prometheus.e-petko.dev/targets)
 **Grafana:** [Grafana](https://grafana.e-petko.dev/dashboards)
 
-![Мониторинг ноды](/metric-diag.png)
+![Мониторинг ноды](/metric-diag-node.png)
 
 
 
-[!Мониторинг website](/metrics-site.png)
+![Мониторинг website](/metrics-site.png)
+

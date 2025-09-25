@@ -6,7 +6,7 @@ type: page
 
 # Связаться со мной
 
-Email: zhenya@example.com  <!-- Замени на свой -->
+Email: zhen.petko@gmail.com  <!-- Замени на свой -->
 Telegram: @your-telegram
 
 ### Форма обратной связи
