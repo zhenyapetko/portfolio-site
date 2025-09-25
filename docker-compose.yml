@@ -31,7 +31,7 @@ services:
     volumes:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
-    command: certonly --webroot -w /var/www/certbot --email zhen.petko@gmail.com -d e-petko.dev -d www.e-petko.dev -d grafana.e-petko.dev -d prometheus.e-petko.dev --agree-tos --non-interactive --keep-until-expiring
+    command: certonly --webroot -w /var/www/certbot --email zhen.petko@gmail.com -d e-petko.dev -d www.e-petko.dev -d grafana.e-petko.dev -d prometheus.e-petko.dev --agree-tos --non-interactive --keep-until-expiring --expand
     networks:
       - monitoring  
     restart: unless-stopped
