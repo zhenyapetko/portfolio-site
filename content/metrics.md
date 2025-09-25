@@ -15,4 +15,4 @@ type: page
 
 
 
-<img src="{{ "metric-diag.png" | absURL }}" alt="Диаграмма метрик" width="500">
+![Диаграмма метрик](/metric-diag.png)
