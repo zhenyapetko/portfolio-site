@@ -30,27 +30,7 @@ services:
     volumes:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
-    command:
-      - "certbot"
-      - "certonly"
-      - "--webroot"
-      - "-w"
-      - "/var/www/certbot"
-      - "-d"
-      - "e-petko.dev"
-      - "-d"
-      - "www.e-petko.dev"
-      - "-d"
-      - "grafana.e-petko.dev"
-      - "-d"
-      - "prometheus.e-petko.dev"
-      - "--email"
-      - "zhen.petko@gmail.com"
-      - "--agree-tos"
-      - "--non-interactive"
-      - "--keep-until-expiring"
-      - "--expand"
-      - "--staging" # Оставляем --staging для тестирования
+    command: certonly --webroot --webroot-path=/var/www/certbot --email zhen.petko@gmail.com --agree-tos --no-eff-email -d e-petko.dev -d www.e-petko.dev -d grafana.e-petko.dev -d prometheus.e-petko.dev
     networks:
       - monitoring
     restart: on-failure
