@@ -42,10 +42,9 @@ services:
             --keep-until-expiring \
             --expand \
             --staging \
-            && echo 'Certbot successful! Now starting Nginx...' \
+            && echo 'Certbot successful!' \
             || (echo 'Certbot failed! Exiting.' && exit 1)
           "
-
     networks:
       - monitoring  
     restart: on-failure
