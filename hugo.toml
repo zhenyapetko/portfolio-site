@@ -10,23 +10,4 @@ favicon = "favicon.ico"
   Email = "zheny.petko@gmail.com"  # Замени на свой email
   GitHub = "https://github.com/zhenyapetko"  # Замени на свой профиль
 
-# Настройки для темы
-[[menu.main]]
-    name = "Главная & Контакты"
-    url = "/"
-    weight = 10
 
-[[menu.main]]
-    name = "Портфолио"
-    url = "/portfolio/"
-    weight = 20
-
-[[menu.main]]
-    name = "О Проекте"
-    url = "/about/"
-    weight = 30
-
-[[menu.main]]
-    name = "Мониторинг"
-    url = "/monitoring/"
-    weight = 40
