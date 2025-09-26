@@ -13,7 +13,7 @@ favicon = "favicon.ico"
 
 # Настройки для темы
 [[menu.main]]
-    name = "Главная"
+    name = "Главная & Контакты"
     url = "/"
     weight = 10
 
@@ -28,11 +28,6 @@ favicon = "favicon.ico"
     weight = 30
 
 [[menu.main]]
-    name = "Метрики"
-    url = "/metrics/"
+    name = "Мониторинг"
+    url = "/monitoring/"
     weight = 40
-
-[[menu.main]]
-    name = "Контакты"
-    url = "/contact/"
-    weight = 50
