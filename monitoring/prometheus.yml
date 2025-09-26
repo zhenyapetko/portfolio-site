@@ -4,6 +4,7 @@ scrape_configs:
   - job_name: 'node'
     static_configs:
       - targets: ['node-exporter:9100']  # Системные metrics
+  
   - job_name: 'blackbox-http'
     metrics_path: /probe
     params:
@@ -14,6 +15,7 @@ scrape_configs:
           - https://grafana.e-petko.dev  
           - https://prometheus.e-petko.dev
           - http://website:8000  # ← ДОБАВИТЬ внутреннюю проверку
+    relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
