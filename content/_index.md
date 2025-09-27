@@ -11,7 +11,7 @@ type: page
 
 ## Добро пожаловать!
 
-Это мой персональный сайт-портфолио. Здесь вы найдёте информацию о моих проектах, навыках и опыте в DevOps.
+Это мой персональный сайт-портфолио. Здесь вы найдёте информацию о моем проекте, навыках и опыте в DevOps.
 
 ### Контакты:
 - <i class="fab fa-linkedin"></i> **LinkedIn:** [Евгений Петько](https://linkedin.com/in/zhenyapetko)
@@ -19,5 +19,14 @@ type: page
 - <i class="fas fa-envelope"></i> **Email:** [zhen.petko@gamil.com](mailto:zhen.petko@gmail.com)
 - <i class="fas fa-mobile-alt"></i> **Телефон:** [+375291441242](tel:+375291441242)
 
-### Мои проекты на GitHub:
-<i class="fab fa-github"></i> [Посмотреть мои репозитории](https://github.com/zhenyapetko?tab=repositories)
+### Мой проект на GitHub:
+<i class="fab fa-github"></i> [Посмотреть мой репозиторий](https://github.com/zhenyapetko?tab=repositories)
+
+
+### Мои навыки:
+- **Контейнеризация:** Docker, Docker Compose, Kubernetes (Basic)
+- **IaC:** Terraform, Ansible
+- **CI/CD:** GitHub Actions, GitLab CI, Jenkins
+- **Мониторинг:** Prometheus,Grafana
+- **Логирование:** Loki, ElasticSearch
+- **Облако:** AWS, GCP

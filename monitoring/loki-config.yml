@@ -6,9 +6,13 @@ server:
 common:
   path_prefix: /loki
   storage:
-    filesystem:
-      chunks_directory: /loki/chunks
-      rules_directory: /loki/rules
+    s3:
+      endpoint: s3.amazonaws.com
+      bucketnames: zhenya-petko-loki-logs-2024  // твое имя bucket
+      region: us-east-1
+      access_key_id: ""    // пусто - используем IAM роль
+      secret_access_key: "" // пусто
+      s3forcepathstyle: false
   replication_factor: 1
   ring:
     instance_addr: 127.0.0.1
@@ -19,7 +23,7 @@ schema_config:
   configs:
     - from: 2020-10-24
       store: boltdb-shipper
-      object_store: filesystem
+      object_store: s3
       schema: v11
       index:
         prefix: index_
@@ -27,4 +31,4 @@ schema_config:
 
 limits_config:
   reject_old_samples: true
-  reject_old_samples_max_age: 168h
+  reject_old_samples_max_age: 720h

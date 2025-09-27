@@ -104,15 +104,10 @@ services:
     restart: unless-stopped
     command: -config.file=/etc/loki/local-config.yml
     volumes:
-      - loki_data:/loki
+      # - loki_data:/loki
       - ./monitoring/loki-config.yml:/etc/loki/local-config.yml
     networks:
       - monitoring
-    # healthcheck:
-    #   test: ["CMD-SHELL", "timeout 5s bash -c 'echo > /dev/tcp/localhost/3100' || exit 1"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
 
   promtail:
     image: grafana/promtail:2.9.4
