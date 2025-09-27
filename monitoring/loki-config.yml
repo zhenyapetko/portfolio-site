@@ -8,10 +8,10 @@ common:
   storage:
     s3:
       endpoint: s3.amazonaws.com
-      bucketnames: zhenya-petko-loki-logs-2024  // твое имя bucket
+      bucketnames: portfolio-site-logs-from-loki  // твое имя bucket
       region: us-east-1
-      access_key_id: ""    // пусто - используем IAM роль
-      secret_access_key: "" // пусто
+      access_key_id: ""
+      secret_access_key: ""
       s3forcepathstyle: false
   replication_factor: 1
   ring:
