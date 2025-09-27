@@ -42,7 +42,7 @@ rsync -av \
 # 5. Копирование SSL сертификатов
 sudo rsync -av /etc/letsencrypt/ $BACKUP_DIR/ssl/
 
-# 6. Архивация
+# 6. Архивируем
 tar -czf /tmp/backup-$(date +%Y%m%d-%H%M%S).tar.gz \
   --exclude="ssl/live" \
   --exclude="ssl/accounts" \
