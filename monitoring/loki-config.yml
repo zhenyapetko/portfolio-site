@@ -8,7 +8,7 @@ common:
   storage:
     s3:
       endpoint: s3.amazonaws.com
-      bucketnames: portfolio-site-logs-from-loki  // твое имя bucket
+      bucketnames: portfolio-site-logs-from-loki
       region: us-east-1
       access_key_id: ""
       secret_access_key: ""
