@@ -1,5 +1,8 @@
 #!/bin/bash
 
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+export HOME=/home/ubuntu
+
 # Параметры
 BUCKET="portfolio-site-logs-from-loki"
 BACKUP_DIR="/tmp/backup-$(date +%Y%m%d-%H%M%S)"
@@ -40,13 +43,18 @@ rsync -av \
 sudo rsync -av /etc/letsencrypt/ $BACKUP_DIR/ssl/
 
 # 6. Архивация
-tar -czf /tmp/backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /tmp $(basename $BACKUP_DIR)
+tar -czf /tmp/backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+  --exclude="ssl/live" \
+  --exclude="ssl/accounts" \
+  --exclude="ssl/archive" \
+  -C /tmp $(basename $BACKUP_DIR)
 
 # 7. Загрузка в S3
 aws s3 cp /tmp/backup-*.tar.gz s3://$BUCKET/backups/project-rsync/
 
 # 8. Очистка
-rm -rf $BACKUP_DIR /tmp/backup-*.tar.gz
+sudo rm -rf $BACKUP_DIR
+rm -f /tmp/backup-*.tar.gz
 
 echo "$(date) - ✅ Backup completed: s3://$BUCKET/backups/project-rsync/backup-$(date +%Y%m%d-*).tar.gz" >> $LOG_FILE
 echo "✅ Backup completed successfully!"
