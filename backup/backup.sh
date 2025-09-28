@@ -18,7 +18,7 @@ docker run --rm \
 aws s3 cp /tmp/grafana-$DATE.tar.gz s3://$BUCKET/backups/grafana/
 
 # Очистка
-rm -f /tmp/grafana-$DATE.tar.gz
+sudo rm -f /tmp/grafana-$DATE.tar.gz
 
 # Логируем успех
 echo "$(date) - Backup completed: grafana-$DATE.tar.gz" >> $LOG_FILE
