@@ -92,7 +92,7 @@ fi
 
 # === ОЧИСТКА ===
 
-# 11. Удаляем временный архив
+# 11.Удаляем временный архив
 rm -f /tmp/grafana-volume-$DATE.tar.gz
 
 echo "$(date) - 🎉 GRAFANA VOLUME BACKUP COMPLETED SUCCESSFULLY" >> $LOG_FILE
