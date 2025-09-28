@@ -1,5 +1,5 @@
 #!/bin/bash
-# бэкап Grafana volume в S3
+# Бэкап Grafana volume в S3
 
 # Настройки
 BUCKET="portfolio-site-logs-from-loki"
