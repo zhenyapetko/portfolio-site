@@ -68,7 +68,7 @@ resource "aws_eip" "elastic_ip" {
 resource "aws_instance" "web_server" {
   ami           = var.ami_id
   instance_type = var.instance_type
-  key_name      = "zhenya-key"  # Замените на ваш key pair (e.g., terraform-key)
+  key_name      = "zhenya-key"
   subnet_id     = aws_subnet.main.id
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
