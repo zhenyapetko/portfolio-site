@@ -48,25 +48,28 @@
 
 Схема
 
-```mermaid
-flowchart TD
-    A[Terraform] -->B
-    C[Ansible] -->B(AWS EC2)
-    L[Developer] -->M(GitHub) -->N(GitHub Action)-->B
-    N -->I
-    B --> E{NGINX}
-    B -->Q[Loki: logs from Promtail]
-    Q --> H
-    E -->F[Website]
-    E -->G[PROMETHEUS
-    metrics from Node-exporter
-    Blackbox-exporter]
-    G --> H
-    E -->H[Grafana]
+```
+---
+config:
+  layout: elk
+  theme: neo
+---
 
-    
-    H -->I{Alert in Telegram}
-    S{S3: Logs and Backup Grafana Volume}
+flowchart TD
+    A["TERRAFORM"] --> B("AWS EC2")
+    C["ANSIBLE"] --> B
+    L["Developer"] --> M("GitHub")
+    M --> N("GitHub Action")
+    N --> B & I{"Alert in Telegram"}
+    B --> E{"NGINX"} & Q["LOKI: logs from Promtail"]
+    Q --> H["GRAFANA"]
+    E --> F["WEBSITE"] & G["PROMETHEUS
+    metrics from Node-exporter
+    Blackbox-exporter"] & H
+    G --> H
+    H --> I
+    S{"S3: Logs and Backup Grafana Volume"}
+
 ```
 
 
