@@ -79,36 +79,23 @@ jobs:
 
             echo "--- Выполнение скрипта деплоя на удаленном сервере ---"
           
-            # if [ ! -d "${DEPLOY_PATH}/.git" ]; then
-            #   echo "Repository not found at ${DEPLOY_PATH}, cloning it..."
-            #   mkdir -p "${DEPLOY_PATH}" || { echo "ERROR: Failed to create directory ${DEPLOY_PATH}"; exit 1; }
-            #   git clone "${GIT_REPO_SSH_URL}" "${DEPLOY_PATH}" || { echo "ERROR: Failed to clone repository ${GIT_REPO_SSH_URL}"; exit 1; }
-            # fi
           
-          
-            cd "${DEPLOY_PATH}"
-
-          
-            # git pull origin main
-
-            # docker system prune -af
-            # docker volume prune -f
-          
-            # docker compose down --remove-orphans 
+            cd "${DEPLOY_PATH}" 
 
             echo "Logging into Docker Hub on EC2, username: ${DOCKER_USER}..."
             echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USER}" --password-stdin
 
             echo "Pulling new image: ${DOCKER_IMAGE_NAME}"
             docker pull "${DOCKER_IMAGE_NAME}"
-            # docker compose up -d --force-recreate --remove-orphans
 
             echo "Restarting service: website"
             docker compose up -d --force-recreate --no-deps website
+
+            echo "🧹 Cleaning unused Docker images..."
+            docker image prune -f
           
-            # echo "--- Docker Compose services started. ---"
             echo "--- Сервис успешно обновлен и запущен ---"
-            
+
             echo "Deployment process finished."
           EOF_SSH_SCRIPT
 
