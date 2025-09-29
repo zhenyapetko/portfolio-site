@@ -52,13 +52,21 @@
 flowchart TD
     A[Terraform] -->B
     C[Ansible] -->B(AWS EC2)
-    L[Developer] -->|Push|M(GitHub) -->N(GitHub Action)-->B
+    L[Developer] -->M(GitHub) -->N(GitHub Action)-->B
     N -->I
     B --> E{NGINX}
+    B -->Q[Loki: logs from Promtail]
+    Q --> H
     E -->F[Website]
-    E -->G[Prometheus]
+    E -->G[PROMETHEUS
+    metrics from Node-exporter
+    Blackbox-exporter]
+    G --> H
     E -->H[Grafana]
+
+    
     H -->I{Alert in Telegram}
+    S{S3: Logs and Backup Grafana Volume}
 ```
 
 
