@@ -16,7 +16,7 @@ type: page
 ### Контакты:
 - <i class="fab fa-linkedin"></i> **LinkedIn:** [Евгений Петько](https://linkedin.com/in/zhenyapetko)
 - <i class="fab fa-telegram"></i> **Telegram:** [@zhenyaaaaaaa](https://t.me/zhenyaaaaaaa)
-- <i class="fas fa-envelope"></i> **Email:** [zhen.petko@gamil.com](mailto:zhen.petko@gmail.com)
+- <i class="fas fa-envelope"></i> **Email:** [zhen.petko@gmail.com](mailto:zhen.petko@gmail.com)
 - <i class="fas fa-mobile-alt"></i> **Телефон:** [+375291441242](tel:+375291441242)
 
 
