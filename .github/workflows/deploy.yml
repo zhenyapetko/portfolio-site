@@ -89,7 +89,7 @@ jobs:
             docker pull "${DOCKER_IMAGE_NAME}"
 
             echo "Restarting service: website"
-            docker compose up -d --force-recreate --no-deps website
+            docker compose up -d --force-recreate --no-deps website certbot
 
             echo "🧹 Cleaning unused Docker images..."
             docker image prune -f
