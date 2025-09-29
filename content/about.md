@@ -24,3 +24,7 @@ type: page
 - **CI/CD:** GitHub Actions
 - **Мониторинг:** Prometheus + Grafana
 - **Облако:** AWS EC2 + ELastic IP
+
+
+### Мой проект на GitHub:
+<i class="fab fa-github"></i> [Посмотреть мой репозиторий](https://github.com/zhenyapetko?tab=repositories)

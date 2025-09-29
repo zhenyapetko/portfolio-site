@@ -19,8 +19,7 @@ type: page
 - <i class="fas fa-envelope"></i> **Email:** [zhen.petko@gamil.com](mailto:zhen.petko@gmail.com)
 - <i class="fas fa-mobile-alt"></i> **Телефон:** [+375291441242](tel:+375291441242)
 
-### Мой проект на GitHub:
-<i class="fab fa-github"></i> [Посмотреть мой репозиторий](https://github.com/zhenyapetko?tab=repositories)
+
 
 
 ### Мои навыки:
