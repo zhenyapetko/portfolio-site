@@ -46,31 +46,7 @@
 
 ## 🏗️ Архитектура
 
-Схема
-
-```
----
-config:
-  layout: elk
-  theme: neo
----
-
-flowchart TD
-    A["TERRAFORM"] --> B("AWS EC2")
-    C["ANSIBLE"] --> B
-    L["Developer"] --> M("GitHub")
-    M --> N("GitHub Action")
-    N --> B & I{"Alert in Telegram"}
-    B --> E{"NGINX"} & Q["LOKI: logs from Promtail"]
-    Q --> H["GRAFANA"]
-    E --> F["WEBSITE"] & G["PROMETHEUS
-    metrics from Node-exporter
-    Blackbox-exporter"] & H
-    G --> H
-    H --> I
-    S{"S3: Logs and Backup Grafana Volume"}
-
-```
+![Схема](/diagram.png)
 
 
 
