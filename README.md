@@ -46,9 +46,21 @@
 
 ## 🏗️ Архитектура
 
-```
 Схема
+
+```mermaid
+flowchart TD
+    A[Terraform] -->B
+    C[Ansible] -->B(AWS EC2)
+    L[Developer] -->|Push|M(GitHub) -->N(GitHub Action)-->B
+    N -->I
+    B --> E{NGINX}
+    E -->F[Website]
+    E -->G[Prometheus]
+    E -->H[Grafana]
+    H -->I{Alert in Telegram}
 ```
+
 
 
 После деплоя доступны:
