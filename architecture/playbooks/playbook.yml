@@ -10,7 +10,7 @@
     nginx_conf_src: "{{ project_root }}/nginx/nginx.conf" # Путь к nginx.conf в репозитории, если он там
     nginx_conf_dest: "{{ project_root }}/nginx.conf" # Место куда Nginx ожидает конфиг внутри/рядом с compose
 
-    monitoring_services: ["prometheus", "grafana", "node-exporter", "certbot", promtali, loki, blackbox-exporter]
+    monitoring_services: ["prometheus", "grafana", "node-exporter", "certbot", promtail, loki, blackbox-exporter]
     monitoring_dir: "{{ project_root }}/monitoring"
 
   tasks:

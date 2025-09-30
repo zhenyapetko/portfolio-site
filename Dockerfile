@@ -25,15 +25,12 @@ RUN rm "${HUGO_TARBALL}"
 
 ENV PATH="/usr/local/bin:${PATH}"
 # Копируем исходный код из хост-машины в /src в контейнере
-# Убедитесь, что вы запускаете docker build из корневой папки вашего репозитория!
 COPY ./ /src
 WORKDIR /src
 # Инициализируем и обновляем подмодули Git.
-# Если .git не скопирован, этот шаг выдаст ошибку.
 RUN git submodule init && git submodule update --init --recursive
 
 # Сборка сайта Hugo.
-# PATH здесь не нужен, так как ENV PATH уже установлен.
 RUN hugo --gc --minify
 
 # Stage 2: Простой HTTP-сервер на Python

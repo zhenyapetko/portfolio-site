@@ -14,11 +14,11 @@ scrape_configs:
           - https://e-petko.dev
           - https://grafana.e-petko.dev  
           - https://prometheus.e-petko.dev
-          - http://website:8000  # ← ДОБАВИТЬ внутреннюю проверку
+          - http://website:8000  
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: blackbox-exporter:9115  # ← Внутренний адрес в Docker сети
+        replacement: blackbox-exporter:9115  # внутренний адрес в Docker сети
